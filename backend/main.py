@@ -47,16 +47,11 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
 
-    # Auto-seed defaults on first run
+    # Seed demo user on first run (rules are seeded via "Reset defaults" button)
     from backend.database import SessionLocal
-    from backend.routes.rules import seed_default_rules
     from backend.models import User
     db = SessionLocal()
     try:
-        result = seed_default_rules(db)
-        if result["seeded"]:
-            logger.info("Seeded %d default business rules", len(result["seeded"]))
-        # Seed demo user
         if not db.query(User).filter(User.username == "nicolas").first():
             db.add(User(
                 username="nicolas",
