@@ -47,20 +47,22 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
 
-    # Seed demo user on first run (rules are seeded via "Reset defaults" button)
+    # Seed/update demo user on startup (rules are seeded via "Reset defaults" button)
     from backend.database import SessionLocal
     from backend.models import User
+    DISPLAY_NAME = "Nicolas S."
+    ROLE = "Head of Strategy and Operations"
     db = SessionLocal()
     try:
-        if not db.query(User).filter(User.username == "nicolas").first():
-            db.add(User(
-                username="nicolas",
-                password="revolut2026",
-                display_name="Nicolas Smeyers",
-                role="Finance Ops · COO",
-            ))
-            db.commit()
+        user = db.query(User).filter(User.username == "nicolas").first()
+        if not user:
+            db.add(User(username="nicolas", password="revolut2026", display_name=DISPLAY_NAME, role=ROLE))
             logger.info("Seeded demo user: nicolas")
+        elif user.display_name != DISPLAY_NAME or user.role != ROLE:
+            user.display_name = DISPLAY_NAME
+            user.role = ROLE
+            logger.info("Updated demo user display_name/role")
+        db.commit()
     finally:
         db.close()
 
