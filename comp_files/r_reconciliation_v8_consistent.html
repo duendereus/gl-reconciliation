@@ -151,7 +151,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 </style>
 
 <!-- LOGIN -->
-<div class="login-screen" id="loginScreen">
+<div class="login-screen" id="loginScreen" style="display:none">
   <div class="login-left">
     <div class="r-logo">R.</div>
     <div class="login-tagline">Reconciliation<br><span>powered by AI.</span></div>
@@ -497,14 +497,17 @@ function applyResponse(data,label){
   breaks = data.breaks || [];
   analyses = data.analyses || [];
   chartData = data.chart_data || null;
+  if(data.dataset_id) currentDatasetId = data.dataset_id;
   updateDashboard(label);
-  refreshDatasetDropdown();
+  refreshDatasetDropdown(); // new upload → refresh list with new entry selected
 }
 
 function showLoading(msg){ const o=document.getElementById('loadingOverlay'),t=document.getElementById('loadingText'); o.style.display='flex'; t.textContent=msg; }
 function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
 
 // ── DATASET DROPDOWN (from DB) ──
+let currentDatasetId = null;
+
 async function refreshDatasetDropdown(){
   const sel = document.getElementById('dataset-select');
   try {
@@ -512,20 +515,26 @@ async function refreshDatasetDropdown(){
     const data = await res.json();
     const ds = data.datasets || [];
     sel.innerHTML = '<option value="">-- Select --</option>' + ds.map(d =>
-      '<option value="'+d.id+'">'+d.name+' \u00b7 '+d.transaction_count+' tx \u00b7 '+d.break_count+' breaks</option>'
+      '<option value="'+d.id+'"'+(d.id===currentDatasetId?' selected':'')+'>'+d.name+' \u00b7 '+d.transaction_count+' tx \u00b7 '+d.break_count+' breaks</option>'
     ).join('');
   } catch(e) { /* ignore */ }
 }
 
 async function loadSavedDataset(id){
   if(!id) return;
+  currentDatasetId = Number(id);
   showLoading('Loading dataset...');
   try {
     const res = await fetch(API_BASE+'/datasets/'+id);
     if(!res.ok) throw new Error('Not found');
     const data = await res.json();
     hideLoading();
-    applyResponse(data, data.name);
+    // Don't call refreshDatasetDropdown here — just update the UI
+    summary = data.summary;
+    breaks = data.breaks || [];
+    analyses = data.analyses || [];
+    chartData = data.chart_data || null;
+    updateDashboard(data.name);
   } catch(e) { hideLoading(); alert('Failed to load dataset: '+e.message); }
 }
 
@@ -622,7 +631,11 @@ async function handleFileUpload(input){
 // ── AUTO-INIT ──
 (async function init(){
   const restored = await tryRestoreSession();
-  if(restored) enterDashboard();
+  if(restored){
+    enterDashboard();
+  } else {
+    document.getElementById('loginScreen').style.display='flex';
+  }
 })();
 
 // ── CHARTS ──
