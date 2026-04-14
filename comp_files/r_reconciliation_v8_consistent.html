@@ -140,13 +140,65 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .sev-badge.Medium{background:#fffbeb;color:var(--amber)}
 .sev-badge.High{background:#fef2f2;color:var(--red)}
 .sev-badge.Critical{background:#fef2f2;color:var(--red);font-weight:700}
-@media(max-width:640px){
-  .login-left{display:none}.login-right{width:100%;min-height:100vh}
-  .table-head,.table-row{grid-template-columns:1fr 1fr 0.9fr}
-  .table-head>*:nth-child(n+4),.table-row>*:nth-child(n+4){display:none}
-  .analysis-row,.explorer-grid{grid-template-columns:1fr}
-  .time-banner{flex-direction:column}
+@media(max-width:768px){
+  /* Login */
+  .login-screen{flex-direction:column}
+  .login-left{min-height:30vh;padding:1.5rem}
+  .login-tagline{font-size:22px}
+  .login-right{width:100%;max-width:100%;min-width:0;padding:1.5rem}
+
+  /* Topbar */
+  .topbar{padding:0 1rem;height:48px}
+  .topbar-right{gap:8px}
+  .badge-live{display:none}
+
+  /* Subbar */
   .subbar{height:auto;padding:10px 1rem;flex-wrap:wrap;gap:8px}
+  .tab-bar{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tab-bar::-webkit-scrollbar{display:none}
+  button.tab-btn{padding:6px 14px;font-size:11px;flex-shrink:0}
+  .dataset-selector{width:100%}
+  .dataset-select{width:100%;max-width:100%}
+
+  /* Content */
+  .content{padding:1rem}
+  .summary-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .stat-card{padding:0.75rem 1rem}
+  .stat-value{font-size:20px}
+
+  /* Upload */
+  .upload-area{padding:1rem}
+
+  /* Breaks table — show ID, Type, Impact only */
+  .table-head,.table-row{grid-template-columns:1fr 0.8fr 0.8fr}
+  .table-head>*:nth-child(n+4),.table-row>*:nth-child(n+4){display:none}
+  .table-head,.table-row{padding:10px 12px;font-size:12px}
+
+  /* Analysis panel */
+  .analysis-row{grid-template-columns:1fr 1fr}
+  .analysis-body{font-size:12px}
+
+  /* Time banner */
+  .time-banner{flex-direction:column;padding:1rem;gap:0.5rem}
+  .time-value{font-size:24px}
+
+  /* Traceability */
+  .trace-header{flex-direction:column;align-items:flex-start;gap:6px}
+  .trace-meta{flex-wrap:wrap}
+
+  /* Explorer */
+  .explorer-grid{grid-template-columns:1fr}
+
+  /* Rules table */
+  .breaks-table .table-head[style],.breaks-table .table-row[style]{
+    grid-template-columns:40px 1fr 0.8fr 0.6fr!important}
+  .breaks-table .table-head[style]>*:nth-child(n+5),.breaks-table .table-row[style]>*:nth-child(n+5){display:none}
+
+  /* Rules form */
+  #rule-form div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+
+  /* Avatar menu */
+  .avatar-menu{right:-10px}
 }
 </style>
 
