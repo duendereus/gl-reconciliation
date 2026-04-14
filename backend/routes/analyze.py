@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -8,7 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import BusinessRule
+from backend.models import BusinessRule, SavedDataset
 from backend.services.claude_client import BreakAnalysis, analyze_breaks
 from backend.services.reconciliation import run_reconciliation
 from backend.services.rule_engine import evaluate_custom_rules
@@ -75,19 +76,38 @@ async def analyze(
     # Chart data computed from full CSV
     chart_data = _build_chart_data(df, breaks)
 
+    break_dicts = [b.to_dict() for b in breaks]
+    summary_dict = {
+        "total_transactions": len(df),
+        "breaks_found": len(breaks),
+        "unreconciled_amount": f"${total_impact:,.2f}",
+        "time_saved": f"{time_saved_h}h",
+    }
+
+    # Persist to DB
+    name = file.filename if (file and file.filename) else dataset_id or "unknown"
+    saved = SavedDataset(
+        name=name,
+        transaction_count=len(df),
+        break_count=len(breaks),
+        summary_json=json.dumps(summary_dict),
+        breaks_json=json.dumps(break_dicts),
+        analyses_json=json.dumps(analysis_dicts),
+        chart_data_json=json.dumps(chart_data),
+    )
+    db.add(saved)
+    db.commit()
+    db.refresh(saved)
+
     return {
         "status": "ok",
+        "dataset_id": saved.id,
         "transactions": len(df),
         "columns": list(df.columns),
-        "breaks": [b.to_dict() for b in breaks],
+        "breaks": break_dicts,
         "analyses": analysis_dicts,
         "chart_data": chart_data,
-        "summary": {
-            "total_transactions": len(df),
-            "breaks_found": len(breaks),
-            "unreconciled_amount": f"${total_impact:,.2f}",
-            "time_saved": f"{time_saved_h}h",
-        },
+        "summary": summary_dict,
     }
 
 

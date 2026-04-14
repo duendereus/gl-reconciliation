@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.database import init_db
 from backend.routes.analyze import router as analyze_router
+from backend.routes.auth import router as auth_router
 from backend.routes.datasets import router as datasets_router
 from backend.routes.rules import router as rules_router
 
@@ -46,14 +47,25 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
 
-    # Auto-seed default business rules on first run
+    # Auto-seed defaults on first run
     from backend.database import SessionLocal
     from backend.routes.rules import seed_default_rules
+    from backend.models import User
     db = SessionLocal()
     try:
         result = seed_default_rules(db)
         if result["seeded"]:
             logger.info("Seeded %d default business rules", len(result["seeded"]))
+        # Seed demo user
+        if not db.query(User).filter(User.username == "nicolas").first():
+            db.add(User(
+                username="nicolas",
+                password="revolut2026",
+                display_name="Nicolas Smeyers",
+                role="Finance Ops · COO",
+            ))
+            db.commit()
+            logger.info("Seeded demo user: nicolas")
     finally:
         db.close()
 
@@ -79,6 +91,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(datasets_router, prefix="/datasets", tags=["datasets"])
 app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
 app.include_router(rules_router, prefix="/rules", tags=["rules"])

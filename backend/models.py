@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, Float, Integer, String, Text, DateTime
+import secrets
 from datetime import datetime, timezone
+
+from sqlalchemy import Boolean, Column, Float, Integer, String, Text, DateTime
 
 from backend.database import Base
 
@@ -79,3 +81,76 @@ class AnalysisCache(Base):
     txn_id = Column(String(30), nullable=False)
     analysis_json = Column(Text, nullable=False)  # full BreakAnalysis as JSON
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class User(Base):
+    """Simple user for demo auth."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(60), unique=True, nullable=False)
+    password = Column(String(120), nullable=False)  # plaintext — demo only
+    display_name = Column(String(120), default="")
+    role = Column(String(60), default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "username": self.username,
+            "display_name": self.display_name,
+            "role": self.role,
+        }
+
+
+class Session(Base):
+    """Active session token."""
+
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False)
+    token = Column(String(64), unique=True, nullable=False, index=True,
+                   default=lambda: secrets.token_hex(32))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_seen = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class LoginEvent(Base):
+    """Audit log of login attempts."""
+
+    __tablename__ = "login_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(60), nullable=False)
+    success = Column(Boolean, nullable=False)
+    ip_address = Column(String(45), default="")
+    user_agent = Column(String(300), default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SavedDataset(Base):
+    """A dataset upload with persisted analysis results."""
+
+    __tablename__ = "saved_datasets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False)
+    uploaded_by = Column(Integer, nullable=True)  # user_id
+    transaction_count = Column(Integer, default=0)
+    break_count = Column(Integer, default=0)
+    summary_json = Column(Text, default="{}")
+    breaks_json = Column(Text, default="[]")
+    analyses_json = Column(Text, default="[]")
+    chart_data_json = Column(Text, default="{}")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "transaction_count": self.transaction_count,
+            "break_count": self.break_count,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

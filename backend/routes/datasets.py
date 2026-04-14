@@ -1,44 +1,37 @@
-import os
-from pathlib import Path
+"""Dataset endpoints — list and retrieve saved datasets from DB."""
 
-import pandas as pd
-from fastapi import APIRouter
+from __future__ import annotations
+
+import json
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from backend.database import get_db
+from backend.models import SavedDataset
 
 router = APIRouter()
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "comp_files"
-
-DATASET_META = {
-    "dataset_1": {
-        "filename": "dataset_1.csv",
-        "label": "Dataset 1 — Apr 12, 2026",
-        "description": "200 synthetic transactions",
-    },
-    "dataset_2": {
-        "filename": "dataset_2.csv",
-        "label": "Dataset 2 — Apr 11, 2026",
-        "description": "500 synthetic transactions",
-    },
-}
-
 
 @router.get("")
-async def list_datasets():
-    """Return available datasets with row counts."""
-    results = []
-    for key, meta in DATASET_META.items():
-        filepath = DATA_DIR / meta["filename"]
-        row_count = 0
-        if filepath.exists():
-            df = pd.read_csv(filepath)
-            row_count = len(df)
-        results.append(
-            {
-                "id": key,
-                "label": meta["label"],
-                "description": meta["description"],
-                "transactions": row_count,
-                "path": str(filepath),
-            }
-        )
-    return {"datasets": results}
+def list_datasets(db: Session = Depends(get_db)):
+    """Return all saved datasets (most recent first)."""
+    datasets = db.query(SavedDataset).order_by(SavedDataset.created_at.desc()).all()
+    return {"datasets": [d.to_dict() for d in datasets]}
+
+
+@router.get("/{dataset_id}")
+def get_dataset(dataset_id: int, db: Session = Depends(get_db)):
+    """Return full saved results for a dataset."""
+    ds = db.query(SavedDataset).filter(SavedDataset.id == dataset_id).first()
+    if not ds:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return {
+        "dataset_id": ds.id,
+        "name": ds.name,
+        "transactions": ds.transaction_count,
+        "breaks": json.loads(ds.breaks_json),
+        "analyses": json.loads(ds.analyses_json),
+        "chart_data": json.loads(ds.chart_data_json),
+        "summary": json.loads(ds.summary_json),
+    }

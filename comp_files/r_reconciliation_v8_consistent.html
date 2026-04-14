@@ -162,8 +162,9 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
       <div class="login-label">R. · Finance Ops</div>
       <div class="login-title">Sign in</div>
       <div class="login-sub">Welcome back to your workspace</div>
-      <div class="field"><label>Username</label><input type="text" value="nicolas"></div>
-      <div class="field"><label>Password</label><input type="password" value="••••••••••"></div>
+      <div class="field"><label>Username</label><input type="text" id="login-user" value="nicolas"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-pass" value="revolut2026"></div>
+      <div id="login-error" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button class="login-btn" onclick="doLogin()">Continue →</button>
       <div class="login-hint"><div class="dot"></div>Demo environment · credentials pre-filled</div>
     </div>
@@ -200,7 +201,12 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
       <button class="tab-btn" onclick="switchTab('explorer',this)">Data Explorer</button>
       <button class="tab-btn" onclick="switchTab('rules',this)">Rules</button>
     </div>
-    <div id="current-dataset-label" style="font-size:12px;color:var(--muted);font-weight:500"></div>
+    <div class="dataset-selector">
+      <span class="dataset-label">Dataset</span>
+      <select class="dataset-select" id="dataset-select" onchange="loadSavedDataset(this.value)">
+        <option value="" selected>-- Select --</option>
+      </select>
+    </div>
   </div>
 
   <div class="content">
@@ -347,6 +353,10 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 <script>
 // ── CONFIG ──
 const API_BASE = window.location.origin;
+let authToken = localStorage.getItem('auth_token') || '';
+let currentUser = null;
+
+function authHeaders(){ return authToken ? {Authorization:'Bearer '+authToken} : {}; }
 
 // ── TYPE BADGE CLASSES ──
 const typeClass={
@@ -363,9 +373,10 @@ const typeLabel={
 };
 
 // ── STATE ──
-let breaks = [];       // from API: breaks[]
-let analyses = [];     // from API: analyses[]
-let summary = null;    // from API: summary{}
+let breaks = [];
+let analyses = [];
+let summary = null;
+let chartData = null;
 let chartsBuilt = false, chartInstances = {};
 
 function fmt(n){ return n == null ? '0' : Number(n).toLocaleString('en-US',{maximumFractionDigits:0}); }
@@ -481,57 +492,107 @@ async function callAnalyze(body){
   return await res.json();
 }
 
-let chartData = null;
-
 function applyResponse(data,label){
   summary = data.summary;
   breaks = data.breaks || [];
   analyses = data.analyses || [];
   chartData = data.chart_data || null;
-  document.getElementById('current-dataset-label').textContent = label + ' \u00b7 ' + (summary?summary.total_transactions:'') + ' tx';
   updateDashboard(label);
+  refreshDatasetDropdown();
 }
 
 function showLoading(msg){ const o=document.getElementById('loadingOverlay'),t=document.getElementById('loadingText'); o.style.display='flex'; t.textContent=msg; }
 function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
 
-// ── SWITCH DATASET ──
-async function switchDataset(val){
-  const dsId = val==='ds1'?'dataset_1':'dataset_2';
-  const label = val==='ds1'?'Dataset 1 \u00b7 Apr 12, 2026':'Dataset 2 \u00b7 Apr 11, 2026';
-  showLoading('Analyzing transactions...');
+// ── DATASET DROPDOWN (from DB) ──
+async function refreshDatasetDropdown(){
+  const sel = document.getElementById('dataset-select');
   try {
-    const form = new FormData(); form.append('dataset_id',dsId);
-    const data = await callAnalyze(form);
+    const res = await fetch(API_BASE+'/datasets');
+    const data = await res.json();
+    const ds = data.datasets || [];
+    sel.innerHTML = '<option value="">-- Select --</option>' + ds.map(d =>
+      '<option value="'+d.id+'">'+d.name+' \u00b7 '+d.transaction_count+' tx \u00b7 '+d.break_count+' breaks</option>'
+    ).join('');
+  } catch(e) { /* ignore */ }
+}
+
+async function loadSavedDataset(id){
+  if(!id) return;
+  showLoading('Loading dataset...');
+  try {
+    const res = await fetch(API_BASE+'/datasets/'+id);
+    if(!res.ok) throw new Error('Not found');
+    const data = await res.json();
     hideLoading();
-    applyResponse(data,label);
+    applyResponse(data, data.name);
   } catch(e) { hideLoading(); alert('Failed to load dataset: '+e.message); }
 }
 
-// ── LOGIN — dashboard starts clean, user uploads CSV ──
-function doLogin(){
+// ── LOGIN (real auth with token persistence) ──
+async function doLogin(){
+  const user = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
   showLoading('Signing in...');
-  const steps=['Signing in...','Loading workspace...'];
-  let i=0;
-  const iv=setInterval(()=>{
-    i++;
-    if(i<steps.length){ document.getElementById('loadingText').textContent=steps[i]; }
-    else {
-      clearInterval(iv);
+  try {
+    const res = await fetch(API_BASE+'/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:user,password:pass})
+    });
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
       hideLoading();
-      document.getElementById('loginScreen').style.display='none';
-      document.getElementById('dashboard').style.display='flex';
-      renderBreaks(); renderTrace();
+      errEl.textContent = err.detail || 'Invalid credentials';
+      errEl.style.display = 'block';
+      return;
     }
-  },500);
+    const data = await res.json();
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('auth_token', authToken);
+    hideLoading();
+    enterDashboard();
+  } catch(e) {
+    hideLoading();
+    errEl.textContent = 'Connection error';
+    errEl.style.display = 'block';
+  }
+}
+
+async function enterDashboard(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('dashboard').style.display='flex';
+  if(currentUser){
+    document.querySelector('.avatar-menu-name').textContent = currentUser.display_name || currentUser.username;
+    document.querySelector('.avatar-menu-role').textContent = currentUser.role || '';
+  }
+  renderBreaks(); renderTrace();
+  await refreshDatasetDropdown();
+}
+
+// ── SESSION RESTORE ON PAGE LOAD ──
+async function tryRestoreSession(){
+  if(!authToken) return false;
+  try {
+    const res = await fetch(API_BASE+'/auth/me',{headers:authHeaders()});
+    if(!res.ok){ localStorage.removeItem('auth_token'); authToken=''; return false; }
+    const data = await res.json();
+    currentUser = data.user;
+    return true;
+  } catch(e){ return false; }
 }
 
 // ── LOGOUT ──
-function doLogout(){
-  breaks=[]; analyses=[]; summary=null;
+async function doLogout(){
+  try { await fetch(API_BASE+'/auth/logout',{method:'POST',headers:authHeaders()}); } catch(e){}
+  authToken=''; currentUser=null;
+  localStorage.removeItem('auth_token');
+  breaks=[]; analyses=[]; summary=null; chartData=null;
   document.getElementById('dashboard').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
-  // Reset stats to defaults
   document.getElementById('stat-tx').textContent='--';
   document.getElementById('stat-breaks').textContent='--';
   document.getElementById('stat-unrec').textContent='--';
@@ -539,6 +600,7 @@ function doLogout(){
   document.getElementById('banner-time').textContent='-- hrs';
   document.getElementById('banner-sub').textContent='Upload a dataset to begin';
   document.getElementById('banner-manual').textContent='--';
+  document.getElementById('dataset-select').innerHTML='<option value="">-- Select --</option>';
 }
 
 // ── FILE UPLOAD ──
@@ -556,6 +618,12 @@ async function handleFileUpload(input){
   } catch(e) { hideLoading(); alert('Upload error: '+e.message); }
   input.value='';
 }
+
+// ── AUTO-INIT ──
+(async function init(){
+  const restored = await tryRestoreSession();
+  if(restored) enterDashboard();
+})();
 
 // ── CHARTS ──
 function buildCharts(){
