@@ -200,13 +200,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
       <button class="tab-btn" onclick="switchTab('explorer',this)">Data Explorer</button>
       <button class="tab-btn" onclick="switchTab('rules',this)">Rules</button>
     </div>
-    <div class="dataset-selector">
-      <span class="dataset-label">Load</span>
-      <select class="dataset-select" onchange="switchDataset(this.value)">
-        <option value="ds1" selected>Apr 12, 2026 · Dataset 1 · 200 tx</option>
-        <option value="ds2">Apr 11, 2026 · Dataset 2 · 500 tx</option>
-      </select>
-    </div>
+    <div id="current-dataset-label" style="font-size:12px;color:var(--muted);font-weight:500"></div>
   </div>
 
   <div class="content">
@@ -494,6 +488,7 @@ function applyResponse(data,label){
   breaks = data.breaks || [];
   analyses = data.analyses || [];
   chartData = data.chart_data || null;
+  document.getElementById('current-dataset-label').textContent = label + ' \u00b7 ' + (summary?summary.total_transactions:'') + ' tx';
   updateDashboard(label);
 }
 
@@ -513,31 +508,22 @@ async function switchDataset(val){
   } catch(e) { hideLoading(); alert('Failed to load dataset: '+e.message); }
 }
 
-// ── LOGIN — loads Dataset 1 automatically ──
+// ── LOGIN — dashboard starts clean, user uploads CSV ──
 function doLogin(){
   showLoading('Signing in...');
-  const steps=['Signing in...','Loading workspace...','Fetching transactions...','Running AI analysis...'];
+  const steps=['Signing in...','Loading workspace...'];
   let i=0;
-  const iv=setInterval(async ()=>{
+  const iv=setInterval(()=>{
     i++;
     if(i<steps.length){ document.getElementById('loadingText').textContent=steps[i]; }
     else {
       clearInterval(iv);
-      try {
-        const form = new FormData(); form.append('dataset_id','dataset_1');
-        const data = await callAnalyze(form);
-        hideLoading();
-        document.getElementById('loginScreen').style.display='none';
-        document.getElementById('dashboard').style.display='flex';
-        applyResponse(data,'Dataset 1 \u00b7 Apr 12, 2026');
-      } catch(e) {
-        hideLoading();
-        document.getElementById('loginScreen').style.display='none';
-        document.getElementById('dashboard').style.display='flex';
-        renderBreaks(); renderTrace();
-      }
+      hideLoading();
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('dashboard').style.display='flex';
+      renderBreaks(); renderTrace();
     }
-  },650);
+  },500);
 }
 
 // ── LOGOUT ──
