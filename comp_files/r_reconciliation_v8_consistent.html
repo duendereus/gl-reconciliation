@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R. · GL Reconciliation</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0a0a'/><text x='50%25' y='73%25' text-anchor='middle' font-family='sans-serif' font-weight='700' font-size='20' fill='white'>R.</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#fff;--surface:#f7f7f7;--surface2:#efefef;--border:#e5e5e5;--border2:#d0d0d0;--text:#0a0a0a;--muted:#888;--muted2:#aaa;--red:#e0193a;--amber:#d97706;--green:#059669;--blue:#1a56db}
+body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.login-screen{display:flex;min-height:100vh}
+.login-left{flex:1;background:#000;display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem;min-height:100vh}
+.login-right{flex:1;min-width:420px;max-width:640px;display:flex;align-items:center;justify-content:center;padding:3rem 4rem;background:#fff}
+.r-logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em}
+.login-tagline{font-size:32px;font-weight:600;color:#fff;line-height:1.2;letter-spacing:-0.02em}
+.login-tagline span{color:#555}
+.login-box{width:100%}
+.login-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem}
+.login-title{font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:0.3rem}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:2rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;padding:11px 14px;background:#fff;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s}
+.field input:focus{border-color:#000}
+.login-btn{width:100%;padding:13px;background:#000;border:none;border-radius:8px;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:0.25rem;transition:background 0.15s,transform 0.1s}
+.login-btn:hover{background:#222}
+.login-btn:active{transform:scale(0.99)}
+.login-hint{margin-top:1rem;font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:#059669;flex-shrink:0}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.93);align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:10px}
+.spinner{width:28px;height:28px;border:2px solid #e5e5e5;border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted);font-weight:500}
+.dashboard{display:none;min-height:100vh;flex-direction:column}
+.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:#fff;position:sticky;top:0;z-index:20}
+.topbar-logo{font-size:16px;font-weight:700;letter-spacing:-0.02em}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.badge-live{font-size:10px;padding:3px 9px;background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0;border-radius:20px;letter-spacing:0.04em;text-transform:uppercase;font-weight:600}
+.avatar{width:30px;height:30px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.subbar{border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:#fff;position:sticky;top:52px;z-index:10;height:56px;gap:1rem}
+.tab-bar{display:flex;align-items:center;gap:8px}
+button.tab-btn{font-size:12px;font-weight:500;padding:7px 20px;border-radius:999px;border:1.5px solid #d0d0d0;background:#ffffff;color:#888;font-family:'Bricolage Grotesque',sans-serif;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;line-height:1.5;display:inline-block}
+button.tab-btn:hover{border-color:#000;color:#0a0a0a}
+button.tab-btn.active{background:#000000!important;border-color:#000000!important;color:#ffffff!important;font-weight:600}
+.dataset-selector{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.dataset-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);white-space:nowrap}
+.dataset-select{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:500;color:var(--text);background:#fff;border:1.5px solid var(--border2);border-radius:8px;padding:6px 28px 6px 10px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color 0.15s;max-width:240px}
+.dataset-select:hover{border-color:#000}
+.content{padding:1.5rem;flex:1}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:6px}
+.stat-value{font-size:26px;font-weight:600;letter-spacing:-0.02em;font-family:'IBM Plex Mono',monospace}
+.stat-sub{font-size:11px;color:var(--muted2);margin-top:3px}
+.stat-value.red{color:var(--red)}.stat-value.amber{color:var(--amber)}.stat-value.green{color:var(--green)}
+.upload-area{background:#fff;border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;margin-bottom:1.25rem;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+.upload-area:hover{border-color:#000;background:var(--surface)}
+.upload-title{font-size:13px;font-weight:500;margin-bottom:3px}
+.upload-sub{font-size:12px;color:var(--muted)}
+.upload-sub span{color:#000;font-weight:500;text-decoration:underline;cursor:pointer}
+.download-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--blue);font-weight:500;text-decoration:underline;cursor:pointer;margin-top:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem}
+.section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)}
+.section-count{font-size:11px;padding:3px 10px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--muted)}
+.breaks-table{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.25rem}
+.table-head{display:grid;grid-template-columns:1.1fr 1fr 1fr 0.8fr 1.6fr 0.7fr;padding:9px 16px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:600;background:var(--surface)}
+.table-row{display:grid;grid-template-columns:1.1fr 1fr 1fr 0.8fr 1.6fr 0.7fr;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;align-items:center;transition:background 0.1s;cursor:pointer}
+.table-row:last-child{border-bottom:none}
+.table-row:hover{background:var(--surface)}
+.table-row.active-row{background:#f5f5f5}
+.break-type{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:600;letter-spacing:0.04em;display:inline-block;text-transform:uppercase}
+.bt-fx{background:#fff0f3;color:var(--red);border:1px solid #fecdd3}
+.bt-missing{background:#fffbeb;color:var(--amber);border:1px solid #fde68a}
+.bt-dup{background:#f0f4ff;color:var(--blue);border:1px solid #bfdbfe}
+.bt-int{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0}
+.txn-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);font-weight:500}
+.impact-neg{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--red)}
+.action-btn{font-size:11px;padding:5px 10px;background:#fff;border:1.5px solid var(--border2);border-radius:6px;color:var(--muted);cursor:pointer;transition:all 0.15s;font-family:'Bricolage Grotesque',sans-serif;font-weight:500}
+.action-btn:hover{border-color:#000;color:#000}
+.analysis-panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem}
+.analysis-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.analysis-title-text{font-size:14px;font-weight:600;letter-spacing:-0.01em}
+.ai-badge{font-size:10px;padding:3px 9px;background:#000;color:#fff;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+.analysis-body{font-size:13px;color:#444;line-height:1.75}
+.analysis-body strong{color:#000;font-weight:600}
+.analysis-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem}
+.analysis-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.ai-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:600;margin-bottom:5px}
+.ai-value{font-size:14px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+.ai-value.green{color:var(--green)}.ai-value.amber{color:var(--amber)}.ai-value.blue{color:var(--blue)}.ai-value.red{color:var(--red)}
+.time-banner{background:#000;border-radius:10px;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.time-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;margin-bottom:4px}
+.time-value{font-size:32px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:#fff;letter-spacing:-0.02em}
+.time-sub{font-size:12px;color:#666;margin-top:4px}
+.time-vs{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.time-manual{font-size:22px;font-weight:500;font-family:'IBM Plex Mono',monospace;color:#555;text-decoration:line-through}
+.trace-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.trace-header{padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background 0.1s}
+.trace-header:hover{background:var(--surface)}
+.trace-title{font-size:13px;font-weight:600}
+.trace-meta{display:flex;align-items:center;gap:8px}
+.trace-body{padding:1.25rem;display:none;border-top:1px solid var(--border)}
+.trace-body.open{display:block}
+.trace-steps{display:flex;flex-direction:column}
+.trace-step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.trace-step:last-child{border-bottom:none}
+.step-num{width:22px;height:22px;border-radius:50%;background:#000;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-content{flex:1}
+.step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px}
+.step-value{font-size:13px;color:var(--text)}
+.step-value code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border)}
+.confidence-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden}
+.confidence-fill{height:100%;background:#000;border-radius:2px}
+.rule-tag{font-size:10px;padding:2px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:'IBM Plex Mono',monospace;color:var(--muted);font-weight:500}
+.chevron{font-size:10px;color:var(--muted);transition:transform 0.2s;display:inline-block}
+.chevron.open{transform:rotate(180deg)}
+.explorer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+.chart-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem}
+.avatar-wrap{position:relative;cursor:pointer}
+.avatar-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:180px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:50}
+.avatar-wrap.open .avatar-menu{display:block}
+.avatar-menu-name{font-size:13px;font-weight:600}
+.avatar-menu-role{font-size:11px;color:var(--muted);margin-top:2px}
+.avatar-menu-sep{height:1px;background:var(--border);margin:10px 0}
+.avatar-menu-item{font-size:13px;color:var(--red);cursor:pointer;padding:4px 0;font-weight:500}
+.avatar-menu-item:hover{opacity:0.7}
+.field select{width:100%;padding:11px 14px;background:#fff;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:14px;outline:none;cursor:pointer}
+.field select:focus{border-color:#000}
+.rule-active{font-size:11px;padding:2px 10px;border-radius:20px;font-weight:600}
+.rule-active.on{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0}
+.rule-active.off{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+.sev-badge{font-size:11px;padding:2px 10px;border-radius:20px;font-weight:600}
+.sev-badge.Low{background:#f0fdf4;color:var(--green)}
+.sev-badge.Medium{background:#fffbeb;color:var(--amber)}
+.sev-badge.High{background:#fef2f2;color:var(--red)}
+.sev-badge.Critical{background:#fef2f2;color:var(--red);font-weight:700}
+@media(max-width:640px){
+  .login-left{display:none}.login-right{width:100%;min-height:100vh}
+  .table-head,.table-row{grid-template-columns:1fr 1fr 0.9fr}
+  .table-head>*:nth-child(n+4),.table-row>*:nth-child(n+4){display:none}
+  .analysis-row,.explorer-grid{grid-template-columns:1fr}
+  .time-banner{flex-direction:column}
+  .subbar{height:auto;padding:10px 1rem;flex-wrap:wrap;gap:8px}
+}
+</style>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-left">
+    <div class="r-logo">R.</div>
+    <div class="login-tagline">Reconciliation<br><span>powered by AI.</span></div>
+    <div style="font-size:12px;color:#444">Finance ops · Mexico</div>
+  </div>
+  <div class="login-right">
+    <div class="login-box">
+      <div class="login-label">R. · Finance Ops</div>
+      <div class="login-title">Sign in</div>
+      <div class="login-sub">Welcome back to your workspace</div>
+      <div class="field"><label>Username</label><input type="text" value="nicolas"></div>
+      <div class="field"><label>Password</label><input type="password" value="••••••••••"></div>
+      <button class="login-btn" onclick="doLogin()">Continue →</button>
+      <div class="login-hint"><div class="dot"></div>Demo environment · credentials pre-filled</div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Signing in...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <div class="topbar-logo">R.</div>
+    <div class="topbar-right">
+      <div class="badge-live">● Live</div>
+      <div style="font-size:12px;color:var(--muted)">Apr 12, 2026</div>
+      <div class="avatar-wrap" onclick="this.classList.toggle('open')">
+        <div class="avatar">NS</div>
+        <div class="avatar-menu">
+          <div class="avatar-menu-name">Nicolas Smeyers</div>
+          <div class="avatar-menu-role">Finance Ops · COO</div>
+          <div class="avatar-menu-sep"></div>
+          <div class="avatar-menu-item" onclick="event.stopPropagation();doLogout()">Sign out</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="subbar">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('breaks',this)">Breaks</button>
+      <button class="tab-btn" onclick="switchTab('trace',this)">Traceability</button>
+      <button class="tab-btn" onclick="switchTab('explorer',this)">Data Explorer</button>
+      <button class="tab-btn" onclick="switchTab('rules',this)">Rules</button>
+    </div>
+    <div class="dataset-selector">
+      <span class="dataset-label">Load</span>
+      <select class="dataset-select" onchange="switchDataset(this.value)">
+        <option value="ds1" selected>Apr 12, 2026 · Dataset 1 · 200 tx</option>
+        <option value="ds2">Apr 11, 2026 · Dataset 2 · 500 tx</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- BREAKS -->
+    <div class="tab-panel active" id="tab-breaks">
+      <div style="margin-bottom:1.25rem">
+        <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em">GL Reconciliation</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px" id="ds-subtitle">AI-powered break detection · Dataset 1 · Apr 12, 2026</div>
+      </div>
+      <div class="summary-grid">
+        <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="stat-tx">--</div><div class="stat-sub">Analyzed</div></div>
+        <div class="stat-card"><div class="stat-label">Breaks found</div><div class="stat-value red" id="stat-breaks">--</div><div class="stat-sub">Require action</div></div>
+        <div class="stat-card"><div class="stat-label">Unreconciled</div><div class="stat-value amber" id="stat-unrec">--</div><div class="stat-sub">MXN</div></div>
+        <div class="stat-card"><div class="stat-label">Time saved</div><div class="stat-value green" id="stat-time">--</div><div class="stat-sub">vs manual review</div></div>
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileUpload(this)">
+      <div class="upload-area" onclick="document.getElementById('csv-input').click()">
+        <div style="font-size:22px;margin-bottom:6px">↑</div>
+        <div class="upload-title">Upload transaction file</div>
+        <div class="upload-sub">CSV · or <span>browse files</span></div>
+        <div class="download-link" onclick="event.stopPropagation();window.open(API_BASE+'/static/dataset_2.csv')">↓ Download Dataset 2 (sample · 500 tx)</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">Detected breaks</div>
+        <div class="section-count" id="break-count">4 of 200</div>
+      </div>
+      <div class="breaks-table">
+        <div class="table-head"><div>ID</div><div>Type</div><div>Operation</div><div>Impact</div><div>Root cause</div><div></div></div>
+        <div id="breaks-tbody"></div>
+      </div>
+      <div class="analysis-panel" id="analysis-panel">
+        <div class="analysis-header">
+          <div class="analysis-title-text" id="analysisTitle">Select a break to view AI analysis</div>
+          <div class="ai-badge">AI Analysis</div>
+        </div>
+        <div class="analysis-body" id="analysisBody" style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</div>
+        <div class="analysis-row" id="analysis-metrics" style="display:none">
+          <div class="analysis-item"><div class="ai-label">Manual resolution</div><div class="ai-value amber" id="am-manual"></div></div>
+          <div class="analysis-item"><div class="ai-label">AI resolution</div><div class="ai-value green" id="am-ai"></div></div>
+          <div class="analysis-item"><div class="ai-label">Confidence</div><div class="ai-value blue" id="am-conf"></div></div>
+          <div class="analysis-item"><div class="ai-label">Priority</div><div class="ai-value" id="am-pri"></div></div>
+        </div>
+      </div>
+      <div class="time-banner">
+        <div><div class="time-label">Time saved today</div><div class="time-value" id="banner-time">-- hrs</div><div class="time-sub" id="banner-sub">Upload a dataset to begin</div></div>
+        <div><div class="time-vs">Manual review</div><div class="time-manual" id="banner-manual">--</div></div>
+      </div>
+    </div>
+
+    <!-- TRACEABILITY -->
+    <div class="tab-panel" id="tab-trace">
+      <div style="margin-bottom:1.25rem">
+        <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em">Traceability</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">How the model reached each decision · fully auditable</div>
+      </div>
+      <div id="trace-container"></div>
+    </div>
+
+    <!-- DATA EXPLORER -->
+    <div class="tab-panel" id="tab-explorer">
+      <div style="margin-bottom:1.25rem">
+        <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em">Data Explorer</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px" id="explorer-sub">Distribution and outliers · 200 transactions · Dataset 1</div>
+      </div>
+      <div class="explorer-grid">
+        <div class="chart-card"><div class="chart-title">Transactions by type</div><div style="position:relative;height:200px"><canvas id="chartType" role="img" aria-label="Transactions by type"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Transactions by hour</div><div style="position:relative;height:200px"><canvas id="chartTime" role="img" aria-label="Transactions by hour"></canvas></div></div>
+        <div class="chart-card full"><div class="chart-title">Scatter · Amount per transaction &nbsp;<span style="color:var(--red);font-weight:600">● Detected breaks</span></div><div style="position:relative;height:260px"><canvas id="chartScatter" role="img" aria-label="Scatter plot with outliers"></canvas></div></div>
+        <div class="chart-card full"><div class="chart-title">Cumulative amount by type · MXN</div><div style="position:relative;height:180px"><canvas id="chartBar" role="img" aria-label="Cumulative amount by type"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- RULES -->
+    <div class="tab-panel" id="tab-rules">
+      <div style="margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em">Business Rules</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px">Manage the reconciliation rules used to detect breaks</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="action-btn" onclick="seedRules()" id="seed-btn">Seed defaults</button>
+          <button class="action-btn" style="background:#0a0a0a;color:#fff" onclick="showRuleForm()">+ Add rule</button>
+        </div>
+      </div>
+
+      <!-- Rule form (hidden by default) -->
+      <div class="analysis-panel" id="rule-form" style="display:none;margin-bottom:1.25rem">
+        <div class="analysis-header">
+          <div class="analysis-title-text" id="rule-form-title">New rule</div>
+          <button class="action-btn" onclick="hideRuleForm()" style="font-size:11px">Cancel</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <div class="field"><label>Name</label><input type="text" id="rf-name" placeholder="e.g. Large FX Transfer"></div>
+          <div class="field"><label>Break type</label><input type="text" id="rf-break-type" placeholder="e.g. CUSTOM_CHECK"></div>
+          <div class="field" style="grid-column:1/-1"><label>Description</label><input type="text" id="rf-desc" placeholder="What does this rule detect?"></div>
+          <div class="field"><label>Field (CSV column)</label><input type="text" id="rf-field" placeholder="e.g. amount_mxn"></div>
+          <div class="field"><label>Operator</label>
+            <select id="rf-operator">
+              <option value="gt">Greater than (gt)</option>
+              <option value="lt">Less than (lt)</option>
+              <option value="eq">Equals (eq)</option>
+              <option value="neq">Not equals (neq)</option>
+              <option value="delta_gt">Delta greater than (delta_gt)</option>
+              <option value="contains">Contains</option>
+              <option value="not_contains">Not contains</option>
+            </select>
+          </div>
+          <div class="field"><label>Value / Threshold</label><input type="text" id="rf-value" placeholder="e.g. 100000"></div>
+          <div class="field"><label>Compare field (optional)</label><input type="text" id="rf-compare" placeholder="e.g. rate_reference"></div>
+          <div class="field"><label>Severity</label>
+            <select id="rf-severity">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div class="field"><label>Filter by type (optional)</label><input type="text" id="rf-filter-type" placeholder="e.g. SWIFT_INTERNATIONAL"></div>
+          <div class="field"><label>Filter by status (optional)</label><input type="text" id="rf-filter-status" placeholder="e.g. DISPATCHED"></div>
+          <div class="field"><label>Active</label>
+            <select id="rf-active">
+              <option value="true" selected>Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:12px;text-align:right">
+          <button class="action-btn" style="background:#0a0a0a;color:#fff;padding:8px 20px" onclick="saveRule()" id="rule-save-btn">Save rule</button>
+        </div>
+      </div>
+
+      <!-- Rules table -->
+      <div class="breaks-table">
+        <div class="table-head" style="grid-template-columns:40px 1.2fr 0.8fr 0.8fr 0.6fr 0.6fr 0.5fr 80px">
+          <div>#</div><div>Name</div><div>Field</div><div>Operator / Value</div><div>Type filter</div><div>Severity</div><div>Active</div><div></div>
+        </div>
+        <div id="rules-tbody"><div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading rules...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── CONFIG ──
+const API_BASE = window.location.origin;
+
+// ── TYPE BADGE CLASSES ──
+const typeClass={
+  FX_RATE:'bt-fx', MISSING_COUNTERPARTY:'bt-missing', DUPLICATE:'bt-dup',
+  INTEREST_MISMATCH:'bt-int', AML_FLAG:'bt-missing', UNAUTHORIZED_REVERSAL:'bt-dup',
+  FEE_MISMATCH:'bt-fx', SETTLEMENT_TIMEOUT:'bt-missing', SPEI_DUPLICATE:'bt-dup',
+  CUSTOM:'bt-fx'
+};
+const typeLabel={
+  FX_RATE:'FX Rate', MISSING_COUNTERPARTY:'Missing', DUPLICATE:'Duplicate',
+  INTEREST_MISMATCH:'Interest', AML_FLAG:'AML Flag', UNAUTHORIZED_REVERSAL:'Reversal',
+  FEE_MISMATCH:'Fee Mismatch', SETTLEMENT_TIMEOUT:'Timeout', SPEI_DUPLICATE:'SPEI Dup',
+  CUSTOM:'Custom'
+};
+
+// ── STATE ──
+let breaks = [];       // from API: breaks[]
+let analyses = [];     // from API: analyses[]
+let summary = null;    // from API: summary{}
+let chartsBuilt = false, chartInstances = {};
+
+function fmt(n){ return n == null ? '0' : Number(n).toLocaleString('en-US',{maximumFractionDigits:0}); }
+
+// ── RENDER BREAKS TABLE ──
+function renderBreaks(){
+  const tbody = document.getElementById('breaks-tbody');
+  if (!breaks.length) {
+    tbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Upload a dataset to detect breaks</div>';
+    document.getElementById('break-count').textContent = '--';
+    document.getElementById('analysisTitle').textContent = 'Select a break to view AI analysis';
+    document.getElementById('analysisBody').innerHTML = '<span style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</span>';
+    document.getElementById('analysis-metrics').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = breaks.map((b,i) => `
+    <div class="table-row" onclick="showAnalysis(${i})">
+      <div class="txn-id">${b.txn_id}</div>
+      <div><span class="break-type ${typeClass[b.break_type]||'bt-missing'}">${typeLabel[b.break_type]||b.break_type}</span></div>
+      <div style="font-size:12px">${typeLabel[b.break_type]||b.break_type}</div>
+      <div class="impact-neg">&minus;$${fmt(b.impact_mxn)}</div>
+      <div style="font-size:12px;color:var(--muted)">${(b.description||'').substring(0,60)}</div>
+      <div><button class="action-btn">Review</button></div>
+    </div>`).join('');
+  document.getElementById('break-count').textContent = breaks.length + ' of ' + (summary?summary.total_transactions:'?');
+  document.getElementById('analysisTitle').textContent = 'Select a break to view AI analysis';
+  document.getElementById('analysisBody').innerHTML = '<span style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</span>';
+  document.getElementById('analysis-metrics').style.display = 'none';
+}
+
+// ── SHOW ANALYSIS ──
+function showAnalysis(idx){
+  const b = breaks[idx]; if(!b) return;
+  const a = analyses.find(x => x.txn_id === b.txn_id) || {};
+  document.getElementById('analysisTitle').textContent = a.title || ((typeLabel[b.break_type]||b.break_type) + ' \u00b7 ' + b.txn_id);
+  document.getElementById('analysisBody').innerHTML = a.body || ('<strong>Root cause:</strong> ' + (b.description||'N/A'));
+  document.getElementById('analysis-metrics').style.display = 'grid';
+  document.getElementById('am-manual').textContent = a.manual || '~30 min';
+  document.getElementById('am-ai').textContent = a.ai || 'N/A';
+  document.getElementById('am-conf').textContent = a.conf || 'N/A';
+  const priEl = document.getElementById('am-pri');
+  const pri = a.pri || b.severity || 'Medium';
+  priEl.textContent = pri;
+  priEl.className = 'ai-value ' + ({Low:'green',Medium:'amber',High:'red',Critical:'red'}[pri]||'amber');
+  document.querySelectorAll('#breaks-tbody .table-row').forEach((r,ri) => r.classList.toggle('active-row', ri===idx));
+}
+
+// ── RENDER TRACEABILITY ──
+function renderTrace(){
+  const c = document.getElementById('trace-container');
+  if (!breaks.length) { c.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No breaks to trace</div>'; return; }
+  c.innerHTML = breaks.map((b,i) => {
+    const a = analyses.find(x => x.txn_id === b.txn_id) || {};
+    const lbl = typeLabel[b.break_type]||b.break_type;
+    const steps = a.steps || [];
+    return `<div class="trace-card">
+      <div class="trace-header" onclick="toggleTrace('tr${i}')">
+        <div class="trace-title">${b.txn_id} \u00b7 ${lbl}</div>
+        <div class="trace-meta">
+          <span class="break-type ${typeClass[b.break_type]||'bt-missing'}">${lbl}</span>
+          <span style="font-size:12px;color:var(--muted)">${a.conf||'N/A'} confidence</span>
+          <span class="chevron" id="ch-tr${i}">\u25be</span>
+        </div>
+      </div>
+      <div class="trace-body" id="tr${i}">
+        <div class="trace-steps">
+          ${steps.length ? steps.map((s,si)=>`
+            <div class="trace-step"><div class="step-num">${si+1}</div><div class="step-content">
+              <div class="step-label">${s.label}</div>
+              <div class="step-value">${s.val}
+                ${s.conf?`<div class="confidence-bar"><div class="confidence-fill" style="width:${s.conf}"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">Confidence: ${s.conf}${s.rule?' \u00b7 <span class="rule-tag">RULE: '+s.rule+'</span>':''}</div>`:''}
+              </div>
+            </div></div>`).join('') : '<div style="padding:12px;color:var(--muted);font-size:13px">Traceability steps pending AI analysis</div>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTrace(id){ document.getElementById(id).classList.toggle('open'); const ch=document.getElementById('ch-'+id); if(ch) ch.classList.toggle('open'); }
+
+// ── SWITCH TAB ──
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='explorer') setTimeout(()=>buildCharts(),50);
+  if(id==='rules') loadRules();
+}
+
+// ── UPDATE DASHBOARD ──
+function updateDashboard(label){
+  if(!summary) return;
+  document.getElementById('stat-tx').textContent = summary.total_transactions;
+  document.getElementById('stat-breaks').textContent = summary.breaks_found;
+  document.getElementById('stat-unrec').textContent = summary.unreconciled_amount;
+  document.getElementById('stat-time').textContent = summary.time_saved;
+  document.getElementById('banner-time').textContent = summary.time_saved.replace('h',' hrs');
+  document.getElementById('banner-sub').textContent = summary.breaks_found+' breaks \u00b7 '+summary.total_transactions+' transactions analyzed';
+  document.getElementById('banner-manual').textContent = '~'+Math.round(summary.breaks_found*45/60*1.2)+' hrs';
+  document.getElementById('ds-subtitle').textContent = 'AI-powered break detection \u00b7 '+(label||'');
+  document.getElementById('explorer-sub').textContent = 'Distribution and outliers \u00b7 '+summary.total_transactions+' transactions';
+  renderBreaks(); renderTrace();
+  chartsBuilt=false; Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}}); chartInstances={};
+  const at=document.querySelector('.tab-panel.active'); if(at&&at.id==='tab-explorer') setTimeout(()=>buildCharts(),50);
+}
+
+// ── API ──
+async function callAnalyze(body){
+  const res = await fetch(API_BASE+'/analyze',{method:'POST',body});
+  if(!res.ok) throw new Error('API error '+res.status);
+  return await res.json();
+}
+
+let chartData = null;
+
+function applyResponse(data,label){
+  summary = data.summary;
+  breaks = data.breaks || [];
+  analyses = data.analyses || [];
+  chartData = data.chart_data || null;
+  updateDashboard(label);
+}
+
+function showLoading(msg){ const o=document.getElementById('loadingOverlay'),t=document.getElementById('loadingText'); o.style.display='flex'; t.textContent=msg; }
+function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
+
+// ── SWITCH DATASET ──
+async function switchDataset(val){
+  const dsId = val==='ds1'?'dataset_1':'dataset_2';
+  const label = val==='ds1'?'Dataset 1 \u00b7 Apr 12, 2026':'Dataset 2 \u00b7 Apr 11, 2026';
+  showLoading('Analyzing transactions...');
+  try {
+    const form = new FormData(); form.append('dataset_id',dsId);
+    const data = await callAnalyze(form);
+    hideLoading();
+    applyResponse(data,label);
+  } catch(e) { hideLoading(); alert('Failed to load dataset: '+e.message); }
+}
+
+// ── LOGIN — loads Dataset 1 automatically ──
+function doLogin(){
+  showLoading('Signing in...');
+  const steps=['Signing in...','Loading workspace...','Fetching transactions...','Running AI analysis...'];
+  let i=0;
+  const iv=setInterval(async ()=>{
+    i++;
+    if(i<steps.length){ document.getElementById('loadingText').textContent=steps[i]; }
+    else {
+      clearInterval(iv);
+      try {
+        const form = new FormData(); form.append('dataset_id','dataset_1');
+        const data = await callAnalyze(form);
+        hideLoading();
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('dashboard').style.display='flex';
+        applyResponse(data,'Dataset 1 \u00b7 Apr 12, 2026');
+      } catch(e) {
+        hideLoading();
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('dashboard').style.display='flex';
+        renderBreaks(); renderTrace();
+      }
+    }
+  },650);
+}
+
+// ── LOGOUT ──
+function doLogout(){
+  breaks=[]; analyses=[]; summary=null;
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  // Reset stats to defaults
+  document.getElementById('stat-tx').textContent='--';
+  document.getElementById('stat-breaks').textContent='--';
+  document.getElementById('stat-unrec').textContent='--';
+  document.getElementById('stat-time').textContent='--';
+  document.getElementById('banner-time').textContent='-- hrs';
+  document.getElementById('banner-sub').textContent='Upload a dataset to begin';
+  document.getElementById('banner-manual').textContent='--';
+}
+
+// ── FILE UPLOAD ──
+async function handleFileUpload(input){
+  const file=input.files[0]; if(!file) return;
+  showLoading('Reading file...');
+  try {
+    setTimeout(()=>document.getElementById('loadingText').textContent='Processing transactions...',500);
+    const form = new FormData(); form.append('file',file);
+    const data = await callAnalyze(form);
+    document.getElementById('loadingText').textContent='Generating report...';
+    await new Promise(r=>setTimeout(r,400));
+    hideLoading();
+    applyResponse(data,file.name);
+  } catch(e) { hideLoading(); alert('Upload error: '+e.message); }
+  input.value='';
+}
+
+// ── CHARTS ──
+function buildCharts(){
+  if(chartsBuilt || !chartData) return; chartsBuilt=true;
+  const cd = chartData;
+  const gray='#888',black='#0a0a0a',bdr='#e5e5e5';
+  const colors=['#0a0a0a','#555','#888','#bbb','#ccc'];
+  const totalTx = summary ? summary.total_transactions : 100;
+
+  chartInstances.type=new Chart(document.getElementById('chartType'),{type:'doughnut',data:{labels:cd.type_labels,datasets:[{data:cd.type_data,backgroundColor:colors,borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11,family:'Bricolage Grotesque'},color:gray,boxWidth:10,padding:12}}}}});
+
+  const hours=Array.from({length:24},(_,i)=>i);
+  chartInstances.time=new Chart(document.getElementById('chartTime'),{type:'bar',data:{labels:hours.map(h=>h+':00'),datasets:[{data:cd.hour_data,backgroundColor:'#0a0a0a',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},color:gray,maxRotation:0,callback:(v,i)=>i%4===0?hours[i]+':00':''},grid:{display:false}},y:{ticks:{font:{size:10},color:gray},grid:{color:bdr}}}}});
+
+  const normal=[];for(let i=0;i<cd.scatter_normal_count;i++){normal.push({x:Math.floor(Math.random()*totalTx)+1,y:Math.round((Math.random()*4000+200)*100)/100});}
+  chartInstances.scatter=new Chart(document.getElementById('chartScatter'),{type:'scatter',data:{datasets:[{label:'Normal',data:normal,backgroundColor:'rgba(10,10,10,0.2)',pointRadius:4,pointHoverRadius:6},{label:'Break detected',data:cd.outliers,backgroundColor:'#e0193a',pointRadius:8,pointHoverRadius:10}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11,family:'Bricolage Grotesque'},color:gray,boxWidth:10}}},scales:{x:{title:{display:true,text:'Transaction #',font:{size:11},color:gray},ticks:{color:gray,font:{size:10}},grid:{color:bdr}},y:{title:{display:true,text:'Amount (MXN)',font:{size:11},color:gray},ticks:{color:gray,font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:bdr}}}}});
+
+  chartInstances.bar=new Chart(document.getElementById('chartBar'),{type:'bar',data:{labels:cd.bar_labels,datasets:[{data:cd.bar_data,backgroundColor:colors,borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:gray,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:bdr}},y:{ticks:{color:black,font:{size:12,family:'Bricolage Grotesque'}},grid:{display:false}}}}});
+}
+
+// ── CLOSE AVATAR MENU ON OUTSIDE CLICK ──
+document.addEventListener('click',e=>{ if(!e.target.closest('.avatar-wrap')) document.querySelectorAll('.avatar-wrap.open').forEach(el=>el.classList.remove('open')); });
+
+// ── RULES CRUD ──
+let editingRuleId = null;
+
+async function loadRules() {
+  const tbody = document.getElementById('rules-tbody');
+  try {
+    const res = await fetch(API_BASE + '/rules');
+    const data = await res.json();
+    const rules = data.rules || [];
+    if (rules.length === 0) {
+      tbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No rules configured. Click "Seed defaults" to load the built-in rules, or "Add rule" to create a custom one.</div>';
+      return;
+    }
+    tbody.innerHTML = rules.map(r => `
+      <div class="table-row" style="grid-template-columns:40px 1.2fr 0.8fr 0.8fr 0.6fr 0.6fr 0.5fr 80px;cursor:default">
+        <div style="font-size:11px;color:var(--muted)">${r.id}</div>
+        <div>
+          <div style="font-size:13px;font-weight:500">${esc(r.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(r.description||'')}</div>
+        </div>
+        <div style="font-size:12px"><code>${esc(r.field)}</code>${r.compare_field ? ' vs <code>' + esc(r.compare_field) + '</code>' : ''}</div>
+        <div style="font-size:12px"><code>${esc(r.operator)}</code> ${esc(r.value)}</div>
+        <div style="font-size:12px">${r.filter_type ? '<code>' + esc(r.filter_type) + '</code>' : '<span style="color:var(--muted)">All</span>'}</div>
+        <div><span class="sev-badge ${r.severity}">${r.severity}</span></div>
+        <div><span class="rule-active ${r.is_active?'on':'off'}">${r.is_active?'Active':'Off'}</span></div>
+        <div style="display:flex;gap:4px">
+          <button class="action-btn" style="font-size:11px;padding:4px 8px" onclick="editRule(${r.id})">Edit</button>
+          <button class="action-btn" style="font-size:11px;padding:4px 8px;color:var(--red)" onclick="deleteRule(${r.id})">Del</button>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    tbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Failed to load rules. Is the backend running?</div>';
+  }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function showRuleForm(rule) {
+  editingRuleId = rule ? rule.id : null;
+  document.getElementById('rule-form-title').textContent = rule ? 'Edit rule #' + rule.id : 'New rule';
+  document.getElementById('rf-name').value = rule ? rule.name : '';
+  document.getElementById('rf-break-type').value = rule ? rule.break_type : '';
+  document.getElementById('rf-desc').value = rule ? (rule.description || '') : '';
+  document.getElementById('rf-field').value = rule ? rule.field : '';
+  document.getElementById('rf-operator').value = rule ? rule.operator : 'gt';
+  document.getElementById('rf-value').value = rule ? rule.value : '';
+  document.getElementById('rf-compare').value = rule ? (rule.compare_field || '') : '';
+  document.getElementById('rf-severity').value = rule ? rule.severity : 'Medium';
+  document.getElementById('rf-filter-type').value = rule ? (rule.filter_type || '') : '';
+  document.getElementById('rf-filter-status').value = rule ? (rule.filter_status || '') : '';
+  document.getElementById('rf-active').value = rule ? String(rule.is_active) : 'true';
+  document.getElementById('rule-form').style.display = 'block';
+  document.getElementById('rule-save-btn').textContent = rule ? 'Update rule' : 'Save rule';
+}
+
+function hideRuleForm() {
+  document.getElementById('rule-form').style.display = 'none';
+  editingRuleId = null;
+}
+
+async function saveRule() {
+  const body = {
+    name: document.getElementById('rf-name').value,
+    break_type: document.getElementById('rf-break-type').value,
+    description: document.getElementById('rf-desc').value,
+    field: document.getElementById('rf-field').value,
+    operator: document.getElementById('rf-operator').value,
+    value: document.getElementById('rf-value').value,
+    compare_field: document.getElementById('rf-compare').value || null,
+    severity: document.getElementById('rf-severity').value,
+    filter_type: document.getElementById('rf-filter-type').value || null,
+    filter_status: document.getElementById('rf-filter-status').value || null,
+    is_active: document.getElementById('rf-active').value === 'true',
+  };
+  const url = editingRuleId ? API_BASE + '/rules/' + editingRuleId : API_BASE + '/rules';
+  const method = editingRuleId ? 'PUT' : 'POST';
+  try {
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { const err = await res.json(); alert('Error: ' + (err.detail || res.statusText)); return; }
+    hideRuleForm();
+    loadRules();
+  } catch (e) { alert('Failed to save rule: ' + e.message); }
+}
+
+async function editRule(id) {
+  try {
+    const res = await fetch(API_BASE + '/rules/' + id);
+    const rule = await res.json();
+    showRuleForm(rule);
+  } catch (e) { alert('Failed to load rule: ' + e.message); }
+}
+
+async function deleteRule(id) {
+  if (!confirm('Delete rule #' + id + '?')) return;
+  try {
+    await fetch(API_BASE + '/rules/' + id, { method: 'DELETE' });
+    loadRules();
+  } catch (e) { alert('Failed to delete rule: ' + e.message); }
+}
+
+async function seedRules() {
+  const btn = document.getElementById('seed-btn');
+  btn.textContent = 'Seeding...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(API_BASE + '/rules/seed', { method: 'POST' });
+    const data = await res.json();
+    btn.textContent = 'Seed defaults';
+    btn.disabled = false;
+    loadRules();
+  } catch (e) {
+    btn.textContent = 'Seed defaults';
+    btn.disabled = false;
+    alert('Failed to seed rules: ' + e.message);
+  }
+}
+</script>

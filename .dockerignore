@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.git
+.env
+*.db
+test_rules.db
+rules.db
+.claude/
+*.md
+!requirements.txt
