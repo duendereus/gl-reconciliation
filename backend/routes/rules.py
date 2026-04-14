@@ -149,7 +149,7 @@ def seed_default_rules(db: Session) -> dict:
         ),
         RuleCreate(
             name="Duplicate Transaction",
-            description="Flag transactions with same counterparty, amount, and timestamp",
+            description="Flag transactions with same counterparty, amount, and timestamp (built-in detector)",
             break_type="DUPLICATE",
             severity="Medium",
             field="counterparty",
@@ -157,10 +157,11 @@ def seed_default_rules(db: Session) -> dict:
             value="*",
             compare_field=None,
             filter_type=None,
+            is_active=False,  # handled by built-in detector
         ),
         RuleCreate(
             name="Interest Mismatch",
-            description="Flag savings accounts where credited MXN deviates from expected yield",
+            description="Flag savings accounts where credited MXN deviates from expected yield (built-in detector)",
             break_type="INTEREST_MISMATCH",
             severity="Low",
             field="amount_mxn",
@@ -168,6 +169,7 @@ def seed_default_rules(db: Session) -> dict:
             value="0.10",
             compare_field=None,
             filter_type="SAVINGS_ACCOUNT",
+            is_active=False,  # handled by built-in detector
         ),
         RuleCreate(
             name="AML Velocity Flag",
@@ -191,23 +193,25 @@ def seed_default_rules(db: Session) -> dict:
         ),
         RuleCreate(
             name="Settlement Timeout",
-            description="Flag DISPATCHED/PENDING transactions past the 15:00h settlement cutoff",
+            description="Flag DISPATCHED/PENDING transactions past the 15:00h settlement cutoff (built-in detector)",
             break_type="SETTLEMENT_TIMEOUT",
             severity="High",
             field="timestamp",
             operator="gt",
             value="15:00",
             filter_status="DISPATCHED",
+            is_active=False,  # handled by built-in detector
         ),
         RuleCreate(
             name="SPEI Duplicate",
-            description="Flag SPEI transactions with same base ID (network retry pattern)",
+            description="Flag SPEI transactions with same base ID — network retry pattern (built-in detector)",
             break_type="SPEI_DUPLICATE",
             severity="Medium",
             field="txn_id",
             operator="contains",
             value="*",
             filter_type="SPEI",
+            is_active=False,  # handled by built-in detector
         ),
         RuleCreate(
             name="Fee Mismatch",

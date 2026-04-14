@@ -487,9 +487,18 @@ function updateDashboard(label){
 
 // ── API ──
 async function callAnalyze(body){
-  const res = await fetch(API_BASE+'/analyze',{method:'POST',body});
-  if(!res.ok) throw new Error('API error '+res.status);
-  return await res.json();
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 120000); // 2min timeout
+  try {
+    const res = await fetch(API_BASE+'/analyze',{method:'POST',body,signal:ctrl.signal});
+    clearTimeout(timer);
+    if(!res.ok) throw new Error('API error '+res.status);
+    return await res.json();
+  } catch(e) {
+    clearTimeout(timer);
+    if(e.name==='AbortError') throw new Error('Analysis timed out. Try again.');
+    throw e;
+  }
 }
 
 function applyResponse(data,label){

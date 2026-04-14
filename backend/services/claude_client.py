@@ -219,7 +219,7 @@ def build_fallback_analysis(brk: Break) -> BreakAnalysis:
 # Main analysis function
 # ---------------------------------------------------------------------------
 
-BATCH_SIZE = 5  # Max concurrent Claude calls to avoid rate limits
+BATCH_SIZE = 3  # Max concurrent Claude calls to stay under rate limits
 
 
 async def _analyze_one(
@@ -230,8 +230,10 @@ async def _analyze_one(
 ) -> BreakAnalysis:
     """Analyze a single break with Claude. Retries on 429. Returns fallback on error."""
     user_msg = build_break_prompt(brk, row_data)
+    last_raw = ""
 
     async def _call():
+        nonlocal last_raw
         t0 = time.time()
         response = await client.messages.create(
             model=CLAUDE_MODEL,
@@ -241,8 +243,8 @@ async def _analyze_one(
             messages=[{"role": "user", "content": user_msg}],
         )
         elapsed = time.time() - t0
-        raw_text = response.content[0].text
-        return parse_claude_response(raw_text, brk, elapsed)
+        last_raw = response.content[0].text
+        return parse_claude_response(last_raw, brk, elapsed)
 
     for attempt in range(3):
         try:
@@ -252,7 +254,7 @@ async def _analyze_one(
             else:
                 return await _call()
         except json.JSONDecodeError:
-            logger.warning("Failed to parse Claude response for %s", brk.txn_id)
+            logger.warning("Parse fail for %s | raw: %.300s", brk.txn_id, last_raw)
             return build_fallback_analysis(brk)
         except Exception as exc:
             err_str = str(exc)
