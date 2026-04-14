@@ -287,7 +287,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
           <div style="font-size:13px;color:var(--muted);margin-top:2px">Manage the reconciliation rules used to detect breaks</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="action-btn" onclick="seedRules()" id="seed-btn">Seed defaults</button>
+          <button class="action-btn" onclick="resetRules()" id="reset-btn">Reset defaults</button>
           <button class="action-btn" style="background:#0a0a0a;color:#fff" onclick="showRuleForm()">+ Add rule</button>
         </div>
       </div>
@@ -776,20 +776,20 @@ async function deleteRule(id) {
   } catch (e) { alert('Failed to delete rule: ' + e.message); }
 }
 
-async function seedRules() {
-  const btn = document.getElementById('seed-btn');
-  btn.textContent = 'Seeding...';
+async function resetRules() {
+  if(!confirm('This will delete all current rules and restore the 9 defaults. Continue?')) return;
+  const btn = document.getElementById('reset-btn');
+  btn.textContent = 'Resetting...';
   btn.disabled = true;
   try {
-    const res = await fetch(API_BASE + '/rules/seed', { method: 'POST' });
-    const data = await res.json();
-    btn.textContent = 'Seed defaults';
+    const res = await fetch(API_BASE + '/rules/reset', { method: 'POST' });
+    btn.textContent = 'Reset defaults';
     btn.disabled = false;
     loadRules();
   } catch (e) {
-    btn.textContent = 'Seed defaults';
+    btn.textContent = 'Reset defaults';
     btn.disabled = false;
-    alert('Failed to seed rules: ' + e.message);
+    alert('Failed to reset rules: ' + e.message);
   }
 }
 </script>

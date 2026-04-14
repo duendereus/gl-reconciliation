@@ -239,3 +239,11 @@ def seed_default_rules(db: Session) -> dict:
 @router.post("/seed", status_code=201)
 def seed_endpoint(db: Session = Depends(get_db)):
     return seed_default_rules(db)
+
+
+@router.post("/reset", status_code=201)
+def reset_rules(db: Session = Depends(get_db)):
+    """Delete all rules and re-seed defaults."""
+    db.query(BusinessRule).delete()
+    db.commit()
+    return seed_default_rules(db)
