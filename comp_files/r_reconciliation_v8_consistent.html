@@ -578,8 +578,15 @@ async function enterDashboard(){
     document.querySelector('.avatar-menu-name').textContent = currentUser.display_name || currentUser.username;
     document.querySelector('.avatar-menu-role').textContent = currentUser.role || '';
   }
-  renderBreaks(); renderTrace();
+  // Load the most recent dataset if any
   await refreshDatasetDropdown();
+  const sel = document.getElementById('dataset-select');
+  if(!currentDatasetId && sel.options.length > 1){
+    // Auto-select most recent (first after "-- Select --")
+    const firstId = sel.options[1].value;
+    if(firstId){ sel.value = firstId; await loadSavedDataset(firstId); return; }
+  }
+  renderBreaks(); renderTrace();
 }
 
 // ── SESSION RESTORE ON PAGE LOAD ──

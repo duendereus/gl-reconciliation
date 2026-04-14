@@ -6,6 +6,7 @@ actions, traceability steps, and confidence scoring.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -218,15 +219,20 @@ def build_fallback_analysis(brk: Break) -> BreakAnalysis:
 # Main analysis function
 # ---------------------------------------------------------------------------
 
+BATCH_SIZE = 5  # Max concurrent Claude calls to avoid rate limits
+
+
 async def _analyze_one(
     client: anthropic.AsyncAnthropic,
     brk: Break,
     row_data: dict | None,
+    semaphore: asyncio.Semaphore | None = None,
 ) -> BreakAnalysis:
-    """Analyze a single break with Claude. Returns fallback on error."""
+    """Analyze a single break with Claude. Retries on 429. Returns fallback on error."""
     user_msg = build_break_prompt(brk, row_data)
-    t0 = time.time()
-    try:
+
+    async def _call():
+        t0 = time.time()
         response = await client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=1000,
@@ -237,12 +243,29 @@ async def _analyze_one(
         elapsed = time.time() - t0
         raw_text = response.content[0].text
         return parse_claude_response(raw_text, brk, elapsed)
-    except json.JSONDecodeError:
-        logger.warning("Failed to parse Claude response for %s", brk.txn_id)
-        return build_fallback_analysis(brk)
-    except Exception as exc:
-        logger.warning("Claude API error for %s: %s", brk.txn_id, exc)
-        return build_fallback_analysis(brk)
+
+    for attempt in range(3):
+        try:
+            if semaphore:
+                async with semaphore:
+                    return await _call()
+            else:
+                return await _call()
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse Claude response for %s", brk.txn_id)
+            return build_fallback_analysis(brk)
+        except Exception as exc:
+            err_str = str(exc)
+            if "429" in err_str or "rate_limit" in err_str:
+                wait = 2 ** attempt * 3  # 3s, 6s, 12s
+                logger.info("Rate limited for %s, retrying in %ds (attempt %d)", brk.txn_id, wait, attempt+1)
+                await asyncio.sleep(wait)
+                continue
+            logger.warning("Claude API error for %s: %s", brk.txn_id, exc)
+            return build_fallback_analysis(brk)
+
+    logger.warning("Max retries for %s, using fallback", brk.txn_id)
+    return build_fallback_analysis(brk)
 
 
 def _cache_key(brk: Break) -> str:
@@ -258,10 +281,9 @@ async def analyze_breaks(
 ) -> list[BreakAnalysis]:
     """Analyze breaks with caching. Cached results are returned instantly.
 
-    Only uncached breaks are sent to Claude (concurrently).  Results are
-    persisted to the ``analysis_cache`` table for future reuse.
+    Only uncached breaks are sent to Claude (concurrently, max 5 at a time).
+    Results are persisted to the ``analysis_cache`` table for future reuse.
     """
-    import asyncio
     from backend.models import AnalysisCache
 
     results: dict[str, BreakAnalysis] = {}  # keyed by txn_id
@@ -309,8 +331,9 @@ async def analyze_breaks(
             results[brk.txn_id] = build_fallback_analysis(brk)
         return [results[b.txn_id] for b in breaks]
 
+    sem = asyncio.Semaphore(BATCH_SIZE)
     tasks = [
-        _analyze_one(client, brk, (row_lookup or {}).get(brk.txn_id))
+        _analyze_one(client, brk, (row_lookup or {}).get(brk.txn_id), semaphore=sem)
         for brk in uncached
     ]
     new_analyses = await asyncio.gather(*tasks)
