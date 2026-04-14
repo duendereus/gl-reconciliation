@@ -157,7 +157,7 @@ def seed_default_rules(db: Session) -> dict:
             value="*",
             compare_field=None,
             filter_type=None,
-            is_active=False,  # handled by built-in detector
+            is_active=True,
         ),
         RuleCreate(
             name="Interest Mismatch",
@@ -169,7 +169,7 @@ def seed_default_rules(db: Session) -> dict:
             value="0.10",
             compare_field=None,
             filter_type="SAVINGS_ACCOUNT",
-            is_active=False,  # handled by built-in detector
+            is_active=True,
         ),
         RuleCreate(
             name="AML Velocity Flag",
@@ -200,7 +200,7 @@ def seed_default_rules(db: Session) -> dict:
             operator="gt",
             value="15:00",
             filter_status="DISPATCHED",
-            is_active=False,  # handled by built-in detector
+            is_active=True,
         ),
         RuleCreate(
             name="SPEI Duplicate",
@@ -211,7 +211,7 @@ def seed_default_rules(db: Session) -> dict:
             operator="contains",
             value="*",
             filter_type="SPEI",
-            is_active=False,  # handled by built-in detector
+            is_active=True,
         ),
         RuleCreate(
             name="Fee Mismatch",

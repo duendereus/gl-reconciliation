@@ -48,8 +48,13 @@ async def analyze(
     # 1. Built-in break detection
     breaks = run_reconciliation(df)
 
-    # 2. Custom rules from DB
-    custom_rules = db.query(BusinessRule).filter(BusinessRule.is_active == True).all()
+    # 2. Custom rules from DB (skip types already handled by built-in detectors)
+    BUILTIN_TYPES = {"FX_RATE","MISSING_COUNTERPARTY","DUPLICATE","INTEREST_MISMATCH",
+                     "AML_FLAG","UNAUTHORIZED_REVERSAL","FEE_MISMATCH","SETTLEMENT_TIMEOUT","SPEI_DUPLICATE"}
+    custom_rules = [
+        r for r in db.query(BusinessRule).filter(BusinessRule.is_active == True).all()
+        if r.break_type not in BUILTIN_TYPES
+    ]
     if custom_rules:
         seen_ids = {b.txn_id for b in breaks}
         custom_breaks = evaluate_custom_rules(df, custom_rules, exclude_txn_ids=seen_ids)
