@@ -122,6 +122,18 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .chart-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem}
 .chart-card.full{grid-column:1/-1}
 .chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem}
+/* Inline analysis drawer (within breaks table) */
+.break-drawer{display:none;border-bottom:1px solid var(--border);background:#fafafa;padding:1.25rem 1.5rem;animation:drawerIn 0.25s ease}
+.break-drawer.open{display:block}
+@keyframes drawerIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.break-drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)}
+.break-drawer-title{font-size:13px;font-weight:600;letter-spacing:-0.01em}
+.break-drawer-body{font-size:13px;color:#444;line-height:1.75}
+.break-drawer-body strong{color:#000;font-weight:600}
+.break-drawer-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem}
+.table-row.active-row{background:#f5f5f5 !important;border-bottom:none}
+.table-row.active-row .action-btn{background:#000;color:#fff;border-color:#000}
+
 /* Tour animations */
 @keyframes tourFade{from{opacity:0}to{opacity:1}}
 @keyframes tourPop{0%{opacity:0;transform:scale(0.9) translateY(-100%)}100%{opacity:1;transform:scale(1) translateY(-100%)}}
@@ -207,6 +219,8 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
   .table-head,.table-row{grid-template-columns:1fr 0.8fr 0.8fr}
   .table-head>*:nth-child(n+4),.table-row>*:nth-child(n+4){display:none}
   .table-head,.table-row{padding:10px 12px;font-size:12px}
+  .break-drawer{padding:1rem}
+  .break-drawer-metrics{grid-template-columns:1fr 1fr}
 
   /* Analysis panel */
   .analysis-row{grid-template-columns:1fr 1fr}
@@ -333,7 +347,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
             <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:2px">Couldn't process this file</div>
             <div style="font-size:12px;color:#7f1d1d" id="upload-error-msg"></div>
           </div>
-          <div style="font-size:18px;color:var(--muted);cursor:pointer;line-height:1" onclick="document.getElementById('upload-error').style.display='none'">\u00d7</div>
+          <div style="font-size:18px;color:var(--muted);cursor:pointer;line-height:1" onclick="document.getElementById('upload-error').style.display='none'">×</div>
         </div>
       </div>
       <div class="section-header">
@@ -346,19 +360,6 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
       <div class="breaks-table">
         <div class="table-head"><div>ID</div><div>Type</div><div>Operation</div><div>Impact</div><div>Root cause</div><div></div></div>
         <div id="breaks-tbody"></div>
-      </div>
-      <div class="analysis-panel" id="analysis-panel">
-        <div class="analysis-header">
-          <div class="analysis-title-text" id="analysisTitle">Select a break to view AI analysis</div>
-          <div class="ai-badge">AI Analysis</div>
-        </div>
-        <div class="analysis-body" id="analysisBody" style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</div>
-        <div class="analysis-row" id="analysis-metrics" style="display:none">
-          <div class="analysis-item"><div class="ai-label">Manual resolution</div><div class="ai-value amber" id="am-manual"></div></div>
-          <div class="analysis-item"><div class="ai-label">AI resolution</div><div class="ai-value green" id="am-ai"></div></div>
-          <div class="analysis-item"><div class="ai-label">Confidence</div><div class="ai-value blue" id="am-conf"></div></div>
-          <div class="analysis-item"><div class="ai-label">Priority</div><div class="ai-value" id="am-pri"></div></div>
-        </div>
       </div>
       <div class="time-banner">
         <div><div class="time-label">Time saved today</div><div class="time-value" id="banner-time">-- hrs</div><div class="time-sub" id="banner-sub">Upload a dataset to begin</div></div>
@@ -499,42 +500,59 @@ function renderBreaks(){
   if (!breaks.length) {
     tbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Upload a dataset to detect breaks</div>';
     document.getElementById('break-count').textContent = '--';
-    document.getElementById('analysisTitle').textContent = 'Select a break to view AI analysis';
-    document.getElementById('analysisBody').innerHTML = '<span style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</span>';
-    document.getElementById('analysis-metrics').style.display = 'none';
     return;
   }
-  tbody.innerHTML = breaks.map((b,i) => `
-    <div class="table-row" onclick="showAnalysis(${i})">
+  tbody.innerHTML = breaks.map((b,i) => {
+    const a = analyses.find(x => x.txn_id === b.txn_id) || {};
+    const title = a.title || ((typeLabel[b.break_type]||b.break_type) + ' \u00b7 ' + b.txn_id);
+    const body = a.body || ('<strong>Root cause:</strong> ' + (b.description||'N/A'));
+    const pri = a.pri || b.severity || 'Medium';
+    const priColor = {Low:'green',Medium:'amber',High:'red',Critical:'red'}[pri]||'amber';
+    return `<div class="table-row" id="row-${i}" onclick="toggleAnalysis(${i})">
       <div class="txn-id">${b.txn_id}</div>
       <div><span class="break-type ${typeClass[b.break_type]||'bt-missing'}">${typeLabel[b.break_type]||b.break_type}</span></div>
       <div style="font-size:12px">${typeLabel[b.break_type]||b.break_type}</div>
       <div class="impact-neg">&minus;$${fmt(b.impact_mxn)}</div>
       <div style="font-size:12px;color:var(--muted)">${(b.description||'').substring(0,60)}</div>
-      <div><button class="action-btn">Review</button></div>
-    </div>`).join('');
+      <div><button class="action-btn" id="btn-${i}">Review</button></div>
+    </div>
+    <div class="break-drawer" id="drawer-${i}">
+      <div class="break-drawer-header">
+        <div class="break-drawer-title">${title}</div>
+        <div class="ai-badge">AI Analysis</div>
+      </div>
+      <div class="break-drawer-body">${body}</div>
+      <div class="break-drawer-metrics">
+        <div class="analysis-item"><div class="ai-label">Manual resolution</div><div class="ai-value amber">${a.manual||'~30 min'}</div></div>
+        <div class="analysis-item"><div class="ai-label">AI resolution</div><div class="ai-value green">${a.ai||'N/A'}</div></div>
+        <div class="analysis-item"><div class="ai-label">Confidence</div><div class="ai-value blue">${a.conf||'N/A'}</div></div>
+        <div class="analysis-item"><div class="ai-label">Priority</div><div class="ai-value ${priColor}">${pri}</div></div>
+      </div>
+    </div>`;
+  }).join('');
   document.getElementById('break-count').textContent = breaks.length + ' of ' + (summary?summary.total_transactions:'?');
-  document.getElementById('analysisTitle').textContent = 'Select a break to view AI analysis';
-  document.getElementById('analysisBody').innerHTML = '<span style="color:var(--muted)">Click any row above to see the detailed root cause analysis and recommended action.</span>';
-  document.getElementById('analysis-metrics').style.display = 'none';
 }
 
-// ── SHOW ANALYSIS ──
-function showAnalysis(idx){
-  const b = breaks[idx]; if(!b) return;
-  const a = analyses.find(x => x.txn_id === b.txn_id) || {};
-  document.getElementById('analysisTitle').textContent = a.title || ((typeLabel[b.break_type]||b.break_type) + ' \u00b7 ' + b.txn_id);
-  document.getElementById('analysisBody').innerHTML = a.body || ('<strong>Root cause:</strong> ' + (b.description||'N/A'));
-  document.getElementById('analysis-metrics').style.display = 'grid';
-  document.getElementById('am-manual').textContent = a.manual || '~30 min';
-  document.getElementById('am-ai').textContent = a.ai || 'N/A';
-  document.getElementById('am-conf').textContent = a.conf || 'N/A';
-  const priEl = document.getElementById('am-pri');
-  const pri = a.pri || b.severity || 'Medium';
-  priEl.textContent = pri;
-  priEl.className = 'ai-value ' + ({Low:'green',Medium:'amber',High:'red',Critical:'red'}[pri]||'amber');
-  document.querySelectorAll('#breaks-tbody .table-row').forEach((r,ri) => r.classList.toggle('active-row', ri===idx));
+// ── TOGGLE INLINE ANALYSIS ──
+let openDrawerIdx = null;
+function toggleAnalysis(idx){
+  const drawer = document.getElementById('drawer-'+idx);
+  const row = document.getElementById('row-'+idx);
+  const btn = document.getElementById('btn-'+idx);
+  if(!drawer) return;
+  const wasOpen = drawer.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.break-drawer').forEach(d=>d.classList.remove('open'));
+  document.querySelectorAll('#breaks-tbody .table-row').forEach(r=>r.classList.remove('active-row'));
+  document.querySelectorAll('#breaks-tbody .action-btn').forEach(b=>b.textContent='Review');
+  if(wasOpen){ openDrawerIdx = null; return; }
+  drawer.classList.add('open');
+  row.classList.add('active-row');
+  if(btn) btn.textContent = 'Hide';
+  openDrawerIdx = idx;
 }
+// Keep showAnalysis name as alias for any external callers
+function showAnalysis(idx){ toggleAnalysis(idx); }
 
 // ── RENDER TRACEABILITY ──
 function renderTrace(){
@@ -661,7 +679,7 @@ function showToast(title, msg, type='info', duration=4500){
       <div class="toast-title">${title}</div>
       ${msg?`<div class="toast-msg">${msg}</div>`:''}
     </div>
-    <div class="toast-close" onclick="dismissToast('${id}')">\u00d7</div>
+    <div class="toast-close" onclick="dismissToast('${id}')">×</div>
   `;
   container.appendChild(el);
   if(duration>0) setTimeout(()=>dismissToast(id), duration);
