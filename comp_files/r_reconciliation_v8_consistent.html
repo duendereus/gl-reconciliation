@@ -362,8 +362,8 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
         <div id="breaks-tbody"></div>
       </div>
       <div class="time-banner">
-        <div><div class="time-label">Time saved today</div><div class="time-value" id="banner-time">-- hrs</div><div class="time-sub" id="banner-sub">Upload a dataset to begin</div></div>
-        <div><div class="time-vs">Manual review</div><div class="time-manual" id="banner-manual">--</div></div>
+        <div><div class="time-label">Your team reclaims</div><div class="time-value" id="banner-time">-- hrs</div><div class="time-sub" id="banner-sub">Upload a dataset to begin</div></div>
+        <div><div class="time-vs">Manual review would take</div><div class="time-manual" id="banner-manual">--</div></div>
       </div>
     </div>
 
@@ -606,7 +606,7 @@ function updateDashboard(label){
   document.getElementById('stat-unrec').textContent = summary.unreconciled_amount;
   document.getElementById('stat-time').textContent = summary.time_saved;
   document.getElementById('banner-time').textContent = summary.time_saved.replace('h',' hrs');
-  document.getElementById('banner-sub').textContent = summary.breaks_found+' breaks \u00b7 '+summary.total_transactions+' transactions analyzed';
+  document.getElementById('banner-sub').textContent = 'from this run \u00b7 '+summary.breaks_found+' breaks resolved across '+summary.total_transactions+' transactions';
   document.getElementById('banner-manual').textContent = '~'+Math.round(summary.breaks_found*45/60*1.2)+' hrs';
   document.getElementById('ds-subtitle').textContent = 'AI-powered break detection \u00b7 '+(label||'');
   document.getElementById('explorer-sub').textContent = 'Distribution and outliers \u00b7 '+summary.total_transactions+' transactions';
@@ -724,7 +724,7 @@ function setProgressStage(stageNum, msg){
   if(msg) document.getElementById('loadingText').textContent = msg;
 }
 function updateAnalyzeProgress(hintMsg){
-  // Called periodically during long Claude wait to rotate helpful hints
+  // Called periodically during long AI wait to rotate helpful hints
   if(hintMsg) document.getElementById('loadingText').textContent = hintMsg;
 }
 function finishProgress(){
@@ -875,12 +875,12 @@ async function handleFileUpload(input){
   showLoading('Reading CSV file...');
   startProgress();
 
-  // Rotating hints during the long Claude wait
+  // Rotating hints during the long AI wait
   const hints = [
     'Reading transactions...',
     'Running reconciliation rules...',
-    'Asking Claude to explain each break...',
-    'Claude is reviewing root causes...',
+    'R. AI is analyzing each break...',
+    'Reviewing root causes...',
     'Scoring priority and confidence...',
     'Preparing recommended actions...',
   ];
@@ -946,6 +946,42 @@ document.addEventListener('click',e=>{ if(!e.target.closest('.avatar-wrap')) doc
 
 // ── EXPORT PDF (Revolut-branded) ──
 function stripHtml(html){ const d=document.createElement('div'); d.innerHTML=html||''; return (d.textContent||d.innerText||'').trim(); }
+
+function buildNextSteps(brks){
+  // Derive concrete action items from the actual breaks
+  const steps = [];
+  const crit = brks.filter(b => b.severity==='Critical');
+  const high = brks.filter(b => b.severity==='High');
+  const byType = {};
+  brks.forEach(b => { byType[b.break_type] = (byType[b.break_type]||0) + 1; });
+
+  if(crit.length){
+    steps.push(`Address ${crit.length} critical break${crit.length>1?'s':''} before end of day — potential regulatory or AML exposure.`);
+  }
+  if(high.length){
+    steps.push(`Review ${high.length} high-priority break${high.length>1?'s':''} within 24 hours.`);
+  }
+  if(byType.FX_RATE >= 1){
+    steps.push(`Check provider FX feed sync — ${byType.FX_RATE} rate deviation${byType.FX_RATE>1?'s':''} detected against BANXICO reference.`);
+  }
+  if(byType.FEE_MISMATCH >= 1){
+    steps.push(`Audit fee schedule for affected client tiers — issue credit notes for overbilled amounts.`);
+  }
+  if(byType.MISSING_COUNTERPARTY >= 1){
+    steps.push(`Initiate SWIFT gpi traces for ${byType.MISSING_COUNTERPARTY} dispatched transfer${byType.MISSING_COUNTERPARTY>1?'s':''} without bank confirmation.`);
+  }
+  if(byType.DUPLICATE >= 1 || byType.SPEI_DUPLICATE >= 1){
+    const total = (byType.DUPLICATE||0) + (byType.SPEI_DUPLICATE||0);
+    steps.push(`Auto-reverse ${total} duplicate charge${total>1?'s':''} and notify affected clients.`);
+  }
+  if(byType.AML_FLAG >= 1){
+    steps.push(`File SAR report with CNBV for ${byType.AML_FLAG} AML-flagged transaction${byType.AML_FLAG>1?'s':''}. Freeze accounts pending compliance review.`);
+  }
+  if(steps.length === 0){
+    steps.push(`Review detected breaks at your next reconciliation cycle — no immediate action required.`);
+  }
+  return steps.slice(0, 5); // cap at 5 to keep it scannable
+}
 
 function exportPDF(){
   if(!breaks.length){ showToast('Nothing to export','Upload a dataset first','info'); return; }
@@ -1077,6 +1113,36 @@ function exportPDF(){
       doc.text(`• ${type.replace(/_/g,' ')} — ${count}`, M, y);
       y += 14;
     });
+    y += 20;
+
+    // Recommended next steps — derived from actual breaks
+    const steps = buildNextSteps(breaks);
+    if(steps.length){
+      doc.setDrawColor(229,229,229); doc.setLineWidth(0.5);
+      doc.line(M, y, W-M, y);
+      y += 20;
+
+      doc.setTextColor(136,136,136);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text('RECOMMENDED NEXT STEPS', M, y);
+      y += 18;
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      steps.forEach((step, i) => {
+        // Number circle
+        doc.setFillColor(10,10,10);
+        doc.circle(M+7, y-3, 9, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(8);
+        doc.setTextColor(255,255,255);
+        doc.text(String(i+1), M+7, y, {align:'center'});
+        // Step text
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.setTextColor(10,10,10);
+        const lines = doc.splitTextToSize(step, W - M*2 - 24);
+        doc.text(lines, M+24, y);
+        y += lines.length * 15 + 8;
+      });
+    }
 
     // ============ BREAKS TABLE ============
     doc.addPage();
