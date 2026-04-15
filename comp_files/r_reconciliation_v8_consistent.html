@@ -122,6 +122,11 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .chart-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem}
 .chart-card.full{grid-column:1/-1}
 .chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem}
+/* Tour animations */
+@keyframes tourFade{from{opacity:0}to{opacity:1}}
+@keyframes tourPop{0%{opacity:0;transform:scale(0.9) translateY(-100%)}100%{opacity:1;transform:scale(1) translateY(-100%)}}
+@keyframes tourPopBottom{0%{opacity:0;transform:scale(0.9)}100%{opacity:1;transform:scale(1)}}
+
 /* Toast notifications */
 .toast-container{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:380px;pointer-events:none}
 .toast{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,0.12);display:flex;align-items:flex-start;gap:10px;animation:toastIn 0.25s cubic-bezier(0.2,0.9,0.3,1.3);pointer-events:auto;border-left:3px solid var(--muted2)}
@@ -333,7 +338,10 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
       </div>
       <div class="section-header">
         <div class="section-title">Detected breaks</div>
-        <div class="section-count" id="break-count">4 of 200</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="action-btn" id="export-pdf-btn" onclick="exportPDF()" style="font-size:11px" disabled>↓ Export PDF</button>
+          <div class="section-count" id="break-count">--</div>
+        </div>
       </div>
       <div class="breaks-table">
         <div class="table-head"><div>ID</div><div>Type</div><div>Operation</div><div>Impact</div><div>Root cause</div><div></div></div>
@@ -452,6 +460,8 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // ── CONFIG ──
 const API_BASE = window.location.origin;
@@ -614,14 +624,19 @@ function showUploadError(msg){
 }
 function hideUploadError(){ document.getElementById('upload-error').style.display='none'; }
 
+let currentDatasetLabel = '';
+
 function applyResponse(data,label){
   summary = data.summary;
   breaks = data.breaks || [];
   analyses = data.analyses || [];
   chartData = data.chart_data || null;
+  currentDatasetLabel = label || '';
   if(data.dataset_id) currentDatasetId = data.dataset_id;
   updateDashboard(label);
-  refreshDatasetDropdown(); // new upload → refresh list with new entry selected
+  refreshDatasetDropdown();
+  // Enable Export PDF if there's data
+  document.getElementById('export-pdf-btn').disabled = breaks.length === 0;
 }
 
 function showLoading(msg){
@@ -787,6 +802,7 @@ async function enterDashboard(){
     if(firstId){ sel.value = firstId; await loadSavedDataset(firstId); return; }
   }
   renderBreaks(); renderTrace();
+  startTourIfFirstTime();
 }
 
 // ── SESSION RESTORE ON PAGE LOAD ──
@@ -817,6 +833,7 @@ async function doLogout(){
   document.getElementById('banner-sub').textContent='Upload a dataset to begin';
   document.getElementById('banner-manual').textContent='--';
   document.getElementById('dataset-select').innerHTML='<option value="">-- Select --</option>';
+  document.getElementById('export-pdf-btn').disabled = true;
 }
 
 // ── FILE UPLOAD ──
@@ -908,6 +925,376 @@ function buildCharts(){
 
 // ── CLOSE AVATAR MENU ON OUTSIDE CLICK ──
 document.addEventListener('click',e=>{ if(!e.target.closest('.avatar-wrap')) document.querySelectorAll('.avatar-wrap.open').forEach(el=>el.classList.remove('open')); });
+
+// ── EXPORT PDF (Revolut-branded) ──
+function stripHtml(html){ const d=document.createElement('div'); d.innerHTML=html||''; return (d.textContent||d.innerText||'').trim(); }
+
+function exportPDF(){
+  if(!breaks.length){ showToast('Nothing to export','Upload a dataset first','info'); return; }
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const M = 48; // margin
+    const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+
+    // ── HELPERS ──
+    const addHeader = () => {
+      doc.setFillColor(10,10,10);
+      doc.rect(0, 0, W, 32, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('R.', M, 21);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(200,200,200);
+      doc.text('GL Reconciliation · Confidential', M+22, 21);
+      doc.setTextColor(180,180,180);
+      doc.text(today, W-M, 21, {align:'right'});
+    };
+    const addFooter = (pageNum, pageTotal) => {
+      doc.setDrawColor(229,229,229);
+      doc.setLineWidth(0.5);
+      doc.line(M, H-38, W-M, H-38);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.setTextColor(136,136,136);
+      doc.text('R. · AI-powered reconciliation', M, H-22);
+      doc.text('Page '+pageNum+' of '+pageTotal, W-M, H-22, {align:'right'});
+    };
+    const sevColor = (sev) => {
+      return {Low:[5,150,105], Medium:[217,119,6], High:[224,25,58], Critical:[224,25,58]}[sev] || [136,136,136];
+    };
+
+    // ============ COVER PAGE ============
+    // Big black band at top
+    doc.setFillColor(10,10,10);
+    doc.rect(0, 0, W, 260, 'F');
+
+    // R. logo
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(56);
+    doc.text('R.', M, 110);
+
+    // Tagline
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.setTextColor(180,180,180);
+    doc.text('Reconciliation, powered by AI.', M, 132);
+
+    // Big title
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(28);
+    doc.text('GL Reconciliation Report', M, 200);
+
+    // Subtitle
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.setTextColor(200,200,200);
+    doc.text(currentDatasetLabel || 'Dataset', M, 222);
+    doc.text('Generated '+today, M, 240);
+
+    // ── EXECUTIVE SUMMARY CARDS ──
+    let y = 310;
+    doc.setTextColor(136,136,136);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('EXECUTIVE SUMMARY', M, y);
+    y += 24;
+
+    const cardW = (W - M*2 - 24) / 4;
+    const cardH = 80;
+    const cards = [
+      {label:'TRANSACTIONS', value:String(summary.total_transactions), sub:'Analyzed', color:[10,10,10]},
+      {label:'BREAKS FOUND', value:String(summary.breaks_found), sub:'Require action', color:[224,25,58]},
+      {label:'UNRECONCILED', value:summary.unreconciled_amount, sub:'MXN', color:[217,119,6]},
+      {label:'TIME SAVED', value:summary.time_saved, sub:'vs manual review', color:[5,150,105]},
+    ];
+    cards.forEach((c,i) => {
+      const x = M + i * (cardW + 8);
+      doc.setDrawColor(229,229,229); doc.setLineWidth(0.8);
+      doc.roundedRect(x, y, cardW, cardH, 6, 6, 'S');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.setTextColor(136,136,136);
+      doc.text(c.label, x+10, y+16);
+      doc.setFont('helvetica','bold'); doc.setFontSize(18);
+      doc.setTextColor(...c.color);
+      doc.text(c.value, x+10, y+44);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.setTextColor(170,170,170);
+      doc.text(c.sub, x+10, y+60);
+    });
+    y += cardH + 40;
+
+    // Divider
+    doc.setDrawColor(229,229,229); doc.setLineWidth(0.5);
+    doc.line(M, y, W-M, y);
+    y += 28;
+
+    // Key insight block
+    doc.setTextColor(136,136,136);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('KEY INSIGHT', M, y);
+    y += 18;
+    const criticalCount = breaks.filter(b=>b.severity==='Critical').length;
+    const highCount = breaks.filter(b=>b.severity==='High').length;
+    const insight = criticalCount > 0
+      ? `${criticalCount} critical and ${highCount} high-priority break${highCount!==1?'s':''} require immediate action.`
+      : highCount > 0
+      ? `${highCount} high-priority break${highCount!==1?'s':''} require review within 24 hours.`
+      : `All detected breaks are medium or low priority. Review at your next reconciliation cycle.`;
+    doc.setFont('helvetica','normal'); doc.setFontSize(12);
+    doc.setTextColor(10,10,10);
+    const insightLines = doc.splitTextToSize(insight, W - M*2);
+    doc.text(insightLines, M, y);
+    y += insightLines.length * 16 + 16;
+
+    // Breakdown by type
+    doc.setTextColor(136,136,136);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('BREAK DISTRIBUTION', M, y);
+    y += 16;
+    const byType = {};
+    breaks.forEach(b => { byType[b.break_type] = (byType[b.break_type]||0) + 1; });
+    const typeEntries = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.setTextColor(10,10,10);
+    typeEntries.forEach(([type, count]) => {
+      doc.text(`• ${type.replace(/_/g,' ')} — ${count}`, M, y);
+      y += 14;
+    });
+
+    // ============ BREAKS TABLE ============
+    doc.addPage();
+    addHeader();
+    y = 68;
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.setTextColor(10,10,10);
+    doc.text('Detected Breaks', M, y);
+    y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.setTextColor(136,136,136);
+    doc.text(`${breaks.length} break${breaks.length!==1?'s':''} detected across ${summary.total_transactions} transactions`, M, y+10);
+    y += 28;
+
+    const tableBody = breaks.map(b => {
+      const a = analyses.find(x => x.txn_id === b.txn_id) || {};
+      return [
+        b.txn_id,
+        b.break_type.replace(/_/g,' '),
+        '$'+Number(b.impact_mxn).toLocaleString('en-US',{maximumFractionDigits:2}),
+        a.pri || b.severity,
+        a.conf || '—',
+      ];
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Transaction ID','Break Type','Impact (MXN)','Priority','Confidence']],
+      body: tableBody,
+      margin: {left: M, right: M},
+      styles: {font:'helvetica', fontSize: 9, cellPadding: 7, lineColor: [229,229,229], lineWidth: 0.5},
+      headStyles: {fillColor: [10,10,10], textColor: [255,255,255], fontStyle: 'bold', fontSize: 8, cellPadding: 8},
+      alternateRowStyles: {fillColor: [250,250,250]},
+      columnStyles: {
+        0: {cellWidth: 90, font: 'courier', fontSize: 8.5},
+        2: {halign: 'right', font: 'courier', fontSize: 9},
+        3: {halign: 'center', fontStyle: 'bold'},
+        4: {halign: 'center'},
+      },
+      didParseCell: (data) => {
+        if(data.section === 'body' && data.column.index === 3){
+          const c = sevColor(data.cell.raw);
+          data.cell.styles.textColor = c;
+        }
+      },
+      didDrawPage: (data) => { addHeader(); },
+    });
+
+    // ============ AI ANALYSIS — one per break ============
+    breaks.forEach((b, idx) => {
+      const a = analyses.find(x => x.txn_id === b.txn_id) || {};
+      doc.addPage();
+      addHeader();
+      let cy = 68;
+
+      // Title row
+      doc.setFont('helvetica','bold'); doc.setFontSize(16);
+      doc.setTextColor(10,10,10);
+      const title = a.title || (b.break_type.replace(/_/g,' ') + ' · ' + b.txn_id);
+      doc.text(title, M, cy);
+      cy += 8;
+
+      // Meta row: priority pill + confidence + impact
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      const pri = a.pri || b.severity;
+      const pc = sevColor(pri);
+      // Priority pill
+      const pillW = doc.getTextWidth(pri) + 16;
+      doc.setFillColor(pc[0], pc[1], pc[2]);
+      doc.roundedRect(M, cy+6, pillW, 16, 8, 8, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text(pri, M + pillW/2, cy+17, {align: 'center'});
+      // Other meta
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(136,136,136);
+      const metaText = `Confidence: ${a.conf || '—'}    ·    Impact: $${Number(b.impact_mxn).toLocaleString('en-US',{maximumFractionDigits:2})} MXN    ·    Manual review: ${a.manual || '~30 min'}`;
+      doc.text(metaText, M + pillW + 10, cy+17);
+      cy += 34;
+
+      // Divider
+      doc.setDrawColor(229,229,229); doc.setLineWidth(0.5);
+      doc.line(M, cy, W-M, cy);
+      cy += 22;
+
+      // Parse the body HTML into plain text sections
+      const bodyHtml = a.body || ('<strong>Root cause:</strong> ' + (b.description || 'N/A'));
+      // Split on <br> or newlines
+      let rootCause = '', action = '';
+      const rcMatch = bodyHtml.match(/Root cause:<\/strong>\s*([\s\S]*?)(?:<br>|<\/p>|Recommended action:|$)/i);
+      const actMatch = bodyHtml.match(/Recommended action:<\/strong>\s*([\s\S]*)/i);
+      if(rcMatch) rootCause = stripHtml(rcMatch[1]);
+      if(actMatch) action = stripHtml(actMatch[1]);
+      if(!rootCause) rootCause = stripHtml(bodyHtml);
+
+      // ROOT CAUSE block
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.setTextColor(136,136,136);
+      doc.text('ROOT CAUSE', M, cy);
+      cy += 16;
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.setTextColor(10,10,10);
+      const rcLines = doc.splitTextToSize(rootCause, W - M*2);
+      doc.text(rcLines, M, cy);
+      cy += rcLines.length * 15 + 18;
+
+      // RECOMMENDED ACTION block
+      if(action){
+        doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        doc.setTextColor(136,136,136);
+        doc.text('RECOMMENDED ACTION', M, cy);
+        cy += 16;
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.setTextColor(10,10,10);
+        const aLines = doc.splitTextToSize(action, W - M*2);
+        doc.text(aLines, M, cy);
+        cy += aLines.length * 15 + 18;
+      }
+
+      // TRACEABILITY steps
+      if(a.steps && a.steps.length){
+        doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        doc.setTextColor(136,136,136);
+        doc.text('TRACEABILITY', M, cy);
+        cy += 16;
+        a.steps.forEach((s, i) => {
+          if(cy > H - 80){ doc.addPage(); addHeader(); cy = 68; }
+          // Step number circle
+          doc.setFillColor(10,10,10);
+          doc.circle(M+6, cy-3, 7, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(7);
+          doc.setTextColor(255,255,255);
+          doc.text(String(i+1), M+6, cy-1, {align:'center'});
+          // Step label
+          doc.setFont('helvetica','bold'); doc.setFontSize(8);
+          doc.setTextColor(136,136,136);
+          doc.text(s.label.toUpperCase(), M+20, cy-6);
+          // Step value
+          doc.setFont('helvetica','normal'); doc.setFontSize(10);
+          doc.setTextColor(10,10,10);
+          const sLines = doc.splitTextToSize(stripHtml(s.val), W - M*2 - 20);
+          doc.text(sLines, M+20, cy+8);
+          cy += sLines.length * 13 + 14;
+        });
+      }
+    });
+
+    // ============ FOOTERS on all pages ============
+    const totalPages = doc.internal.getNumberOfPages();
+    for(let p=1; p<=totalPages; p++){
+      doc.setPage(p);
+      addFooter(p, totalPages);
+    }
+
+    // Save
+    const safeLabel = (currentDatasetLabel || 'report').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    doc.save(`r-reconciliation-${safeLabel}-${today.replace(/[, ]/g,'-')}.pdf`);
+    showToast('Report exported', 'PDF downloaded to your device', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Export failed', e.message, 'error');
+  }
+}
+
+// ── ONBOARDING TOUR ──
+const TOUR_STEPS = [
+  {sel:'.upload-area', title:'1. Upload transactions',
+   msg:'Drop any CSV here to run the reconciliation. The AI will detect breaks and explain each one.'},
+  {sel:'#breaks-tbody, .breaks-table', title:'2. Detected breaks',
+   msg:'Click any row to see the AI-generated root cause and recommended action.'},
+  {sel:'.dataset-selector', title:'3. Switch datasets',
+   msg:'Analyses are saved here. Switch between uploads without re-running the AI.'},
+  {sel:'button.tab-btn:nth-child(4)', title:'4. Business rules',
+   msg:'Customize the detection rules your team uses. Add your own or tune the defaults.'},
+];
+let tourIdx = 0;
+
+function startTourIfFirstTime(){
+  if(localStorage.getItem('tour_seen')) return;
+  setTimeout(()=>runTourStep(0), 600);
+}
+
+function runTourStep(idx){
+  removeTourOverlay();
+  if(idx >= TOUR_STEPS.length){ localStorage.setItem('tour_seen','1'); return; }
+  tourIdx = idx;
+  const step = TOUR_STEPS[idx];
+  const el = document.querySelector(step.sel);
+  if(!el){ runTourStep(idx+1); return; }
+  const r = el.getBoundingClientRect();
+
+  // Backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'tour-backdrop';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:150;animation:tourFade 0.2s';
+  document.body.appendChild(backdrop);
+
+  // Highlight — clone the element's position with a glow
+  const highlight = document.createElement('div');
+  highlight.id = 'tour-highlight';
+  highlight.style.cssText = `position:fixed;top:${r.top-6}px;left:${r.left-6}px;width:${r.width+12}px;height:${r.height+12}px;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 0 3px #fff;z-index:151;pointer-events:none;transition:all 0.25s`;
+  document.body.appendChild(highlight);
+
+  // Tooltip
+  const tip = document.createElement('div');
+  tip.id = 'tour-tip';
+  const isBottom = r.top < window.innerHeight / 2;
+  const tipTop = isBottom ? r.bottom + 16 : r.top - 16;
+  const tipTransform = isBottom ? '' : 'translateY(-100%)';
+  tip.style.cssText = `position:fixed;top:${tipTop}px;left:${Math.min(Math.max(r.left, 20), window.innerWidth - 340)}px;transform:${tipTransform};background:#0a0a0a;color:#fff;padding:16px 18px;border-radius:12px;max-width:320px;z-index:152;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:tourPop 0.3s cubic-bezier(0.2,0.9,0.3,1.3)`;
+  tip.innerHTML = `
+    <div style="font-size:11px;color:#888;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Step ${idx+1} of ${TOUR_STEPS.length}</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">${step.title}</div>
+    <div style="font-size:13px;color:#bbb;line-height:1.5;margin-bottom:14px">${step.msg}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="display:flex;gap:4px">
+        ${TOUR_STEPS.map((_,i)=>`<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#fff':'#444'}"></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="action-btn" style="background:transparent;color:#888;border-color:#444;font-size:11px" onclick="skipTour()">Skip</button>
+        <button class="action-btn" style="background:#fff;color:#000;border-color:#fff;font-size:11px" onclick="runTourStep(${idx+1})">${idx===TOUR_STEPS.length-1?'Got it':'Next →'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(tip);
+}
+
+function removeTourOverlay(){
+  ['tour-backdrop','tour-highlight','tour-tip'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.remove();
+  });
+}
+function skipTour(){
+  removeTourOverlay();
+  localStorage.setItem('tour_seen','1');
+}
 
 // ── RULES CRUD ──
 let editingRuleId = null;
