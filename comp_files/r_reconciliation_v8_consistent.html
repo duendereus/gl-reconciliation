@@ -57,7 +57,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .stat-value{font-size:26px;font-weight:600;letter-spacing:-0.02em;font-family:'IBM Plex Mono',monospace}
 .stat-sub{font-size:11px;color:var(--muted2);margin-top:3px}
 .stat-value.red{color:var(--red)}.stat-value.amber{color:var(--amber)}.stat-value.green{color:var(--green)}
-.upload-area{background:#fff;border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;margin-bottom:1.25rem;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+.upload-area{background:#fff;border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;display:flex;flex-direction:column;justify-content:center}
 .upload-area:hover{border-color:#000;background:var(--surface)}
 .upload-title{font-size:13px;font-weight:500;margin-bottom:3px}
 .upload-sub{font-size:12px;color:var(--muted)}
@@ -122,6 +122,12 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .chart-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem}
 .chart-card.full{grid-column:1/-1}
 .chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem}
+/* Upload + sample card grid */
+.upload-grid{display:grid;grid-template-columns:1fr 260px;gap:10px;margin-bottom:1.25rem}
+.sample-card{background:#fff;border:1.5px solid var(--border2);border-radius:10px;padding:1rem 1.25rem;cursor:pointer;transition:border-color 0.15s,background 0.15s;display:flex;flex-direction:column;justify-content:center}
+.sample-card:hover{border-color:var(--blue);background:#f8faff}
+@media(max-width:640px){.upload-grid{grid-template-columns:1fr}}
+
 /* Inline analysis drawer (within breaks table) */
 .break-drawer{display:none;border-bottom:1px solid var(--border);background:#fafafa;padding:1.25rem 1.5rem;animation:drawerIn 0.25s ease}
 .break-drawer.open{display:block}
@@ -334,11 +340,18 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
         <div class="stat-card"><div class="stat-label">Time saved</div><div class="stat-value green" id="stat-time">--</div><div class="stat-sub">vs manual review</div></div>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileUpload(this)">
-      <div class="upload-area" onclick="document.getElementById('csv-input').click()">
-        <div style="font-size:22px;margin-bottom:6px">↑</div>
-        <div class="upload-title">Upload transaction file</div>
-        <div class="upload-sub">CSV · or <span>browse files</span></div>
-        <div class="download-link" onclick="event.stopPropagation();window.open(API_BASE+'/static/dataset_2.csv')">↓ Download Dataset 2 (sample · 500 tx)</div>
+      <div class="upload-grid">
+        <div class="upload-area" onclick="document.getElementById('csv-input').click()">
+          <div style="font-size:22px;margin-bottom:6px">↑</div>
+          <div class="upload-title">Upload transaction file</div>
+          <div class="upload-sub">CSV · or <span>browse files</span></div>
+        </div>
+        <div class="sample-card" id="sample-card" onclick="window.open(API_BASE+'/static/dataset_2.csv')">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Try it with sample data</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px">↓ Dataset 2</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">500 synthetic transactions · 9 seeded breaks</div>
+          <div style="font-size:11px;color:var(--blue);font-weight:500">Download CSV →</div>
+        </div>
       </div>
       <div id="upload-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:1.25rem">
         <div style="display:flex;align-items:flex-start;gap:10px">
@@ -1310,12 +1323,14 @@ function exportPDF(){
 // ── ONBOARDING TOUR ──
 const TOUR_STEPS = [
   {sel:'.upload-area', title:'1. Upload transactions',
-   msg:'Drop any CSV here to run the reconciliation. The AI will detect breaks and explain each one.'},
-  {sel:'#breaks-tbody, .breaks-table', title:'2. Detected breaks',
+   msg:'Drop any CSV here to run the reconciliation. R. AI will detect breaks and explain each one.'},
+  {sel:'#sample-card', title:'2. Try it with sample data',
+   msg:'No CSV handy? Download the sample dataset (500 transactions · 9 seeded breaks) and upload it here to see the full flow.'},
+  {sel:'#breaks-tbody, .breaks-table', title:'3. Detected breaks',
    msg:'Click any row to see the AI-generated root cause and recommended action.'},
-  {sel:'.dataset-selector', title:'3. Switch datasets',
+  {sel:'.dataset-selector', title:'4. Switch datasets',
    msg:'Analyses are saved here. Switch between uploads without re-running the AI.'},
-  {sel:'button.tab-btn:nth-child(4)', title:'4. Business rules',
+  {sel:'button.tab-btn:nth-child(4)', title:'5. Business rules',
    msg:'Customize the detection rules your team uses. Add your own or tune the defaults.'},
 ];
 let tourIdx = 0;
