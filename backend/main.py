@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.database import init_db
+from backend.routes.admin import router as admin_router
 from backend.routes.analyze import router as analyze_router
 from backend.routes.auth import router as auth_router
 from backend.routes.datasets import router as datasets_router
@@ -92,6 +93,7 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(datasets_router, prefix="/datasets", tags=["datasets"])
 app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
 
 # Serve frontend static files
 comp_dir = os.path.join(os.path.dirname(__file__), "..", "comp_files")
