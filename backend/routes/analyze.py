@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import BusinessRule, SavedDataset
 from backend.services.claude_client import BreakAnalysis, analyze_breaks
+from backend.services.csv_validator import ValidationError, validate_csv
 from backend.services.reconciliation import run_reconciliation
 from backend.services.rule_engine import evaluate_custom_rules
 
@@ -32,11 +33,25 @@ async def analyze(
       - A dataset_id referencing a bundled dataset (dataset_1, dataset_2).
     """
     if file and file.filename:
+        if not file.filename.lower().endswith(".csv"):
+            raise HTTPException(
+                status_code=400,
+                detail="Only .csv files are supported. Please export your transactions as CSV.",
+            )
         contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="The uploaded file is empty.")
         try:
             df = pd.read_csv(io.BytesIO(contents))
+        except pd.errors.EmptyDataError:
+            raise HTTPException(status_code=400, detail="The CSV file contains no data.")
+        except pd.errors.ParserError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"The file is not a valid CSV: {exc}. Check for missing quotes or bad delimiters.",
+            )
         except Exception as exc:
-            raise HTTPException(status_code=400, detail=f"Invalid CSV: {exc}")
+            raise HTTPException(status_code=400, detail=f"Could not read CSV: {exc}")
     elif dataset_id:
         filepath = DATA_DIR / f"{dataset_id}.csv"
         if not filepath.exists():
@@ -44,6 +59,12 @@ async def analyze(
         df = pd.read_csv(filepath)
     else:
         raise HTTPException(status_code=400, detail="Provide a CSV file or dataset_id")
+
+    # Validate schema
+    try:
+        df = validate_csv(df)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     # 1. Built-in break detection
     breaks = run_reconciliation(df)

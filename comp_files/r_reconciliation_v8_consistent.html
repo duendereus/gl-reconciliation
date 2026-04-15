@@ -281,6 +281,16 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
         <div class="upload-sub">CSV · or <span>browse files</span></div>
         <div class="download-link" onclick="event.stopPropagation();window.open(API_BASE+'/static/dataset_2.csv')">↓ Download Dataset 2 (sample · 500 tx)</div>
       </div>
+      <div id="upload-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:1.25rem">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="color:var(--red);font-weight:700;font-size:16px;line-height:1">!</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:2px">Couldn't process this file</div>
+            <div style="font-size:12px;color:#7f1d1d" id="upload-error-msg"></div>
+          </div>
+          <div style="font-size:18px;color:var(--muted);cursor:pointer;line-height:1" onclick="document.getElementById('upload-error').style.display='none'">\u00d7</div>
+        </div>
+      </div>
       <div class="section-header">
         <div class="section-title">Detected breaks</div>
         <div class="section-count" id="break-count">4 of 200</div>
@@ -544,14 +554,25 @@ async function callAnalyze(body){
   try {
     const res = await fetch(API_BASE+'/analyze',{method:'POST',body,signal:ctrl.signal});
     clearTimeout(timer);
-    if(!res.ok) throw new Error('API error '+res.status);
+    if(!res.ok){
+      let detail = 'Server error ('+res.status+')';
+      try { const j = await res.json(); if(j.detail) detail = j.detail; } catch(e) {}
+      throw new Error(detail);
+    }
     return await res.json();
   } catch(e) {
     clearTimeout(timer);
-    if(e.name==='AbortError') throw new Error('Analysis timed out. Try again.');
+    if(e.name==='AbortError') throw new Error('Analysis timed out after 2 minutes. The file may be too large — please try a smaller sample.');
     throw e;
   }
 }
+
+function showUploadError(msg){
+  document.getElementById('upload-error-msg').textContent = msg;
+  document.getElementById('upload-error').style.display = 'block';
+  document.getElementById('upload-error').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function hideUploadError(){ document.getElementById('upload-error').style.display='none'; }
 
 function applyResponse(data,label){
   summary = data.summary;
@@ -683,6 +704,21 @@ async function doLogout(){
 // ── FILE UPLOAD ──
 async function handleFileUpload(input){
   const file=input.files[0]; if(!file) return;
+  hideUploadError();
+  // Client-side pre-checks
+  if(!file.name.toLowerCase().endsWith('.csv')){
+    showUploadError('This file is not a CSV. Please export your transactions as .csv format.');
+    input.value=''; return;
+  }
+  if(file.size === 0){
+    showUploadError('The file is empty.');
+    input.value=''; return;
+  }
+  if(file.size > 10 * 1024 * 1024){
+    showUploadError('File is larger than 10MB. Please split it into smaller batches.');
+    input.value=''; return;
+  }
+
   showLoading('Reading file...');
   try {
     setTimeout(()=>document.getElementById('loadingText').textContent='Processing transactions...',500);
@@ -692,7 +728,10 @@ async function handleFileUpload(input){
     await new Promise(r=>setTimeout(r,400));
     hideLoading();
     applyResponse(data,file.name);
-  } catch(e) { hideLoading(); alert('Upload error: '+e.message); }
+  } catch(e) {
+    hideLoading();
+    showUploadError(e.message);
+  }
   input.value='';
 }
 
