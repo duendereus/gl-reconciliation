@@ -855,6 +855,8 @@ async function doLogout(){
   authToken=''; currentUser=null;
   localStorage.removeItem('auth_token');
   breaks=[]; analyses=[]; summary=null; chartData=null;
+  currentDatasetId = null; currentDatasetLabel = ''; openDrawerIdx = null;
+  window._liveAnalyses = [];
   document.getElementById('dashboard').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('stat-tx').textContent='--';
