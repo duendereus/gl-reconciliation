@@ -830,9 +830,10 @@ async function enterDashboard(){
   if(!currentDatasetId && sel.options.length > 1){
     // Auto-select most recent (first after "-- Select --")
     const firstId = sel.options[1].value;
-    if(firstId){ sel.value = firstId; await loadSavedDataset(firstId); return; }
+    if(firstId){ sel.value = firstId; await loadSavedDataset(firstId); }
+  } else {
+    renderBreaks(); renderTrace();
   }
-  renderBreaks(); renderTrace();
   startTourIfFirstTime();
 }
 
