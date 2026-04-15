@@ -122,6 +122,35 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .chart-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem}
 .chart-card.full{grid-column:1/-1}
 .chart-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem}
+/* Toast notifications */
+.toast-container{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:380px;pointer-events:none}
+.toast{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,0.12);display:flex;align-items:flex-start;gap:10px;animation:toastIn 0.25s cubic-bezier(0.2,0.9,0.3,1.3);pointer-events:auto;border-left:3px solid var(--muted2)}
+.toast.success{border-left-color:var(--green)}
+.toast.error{border-left-color:var(--red)}
+.toast.info{border-left-color:var(--blue)}
+.toast-icon{font-weight:700;font-size:14px;line-height:1.2;flex-shrink:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
+.toast.success .toast-icon{background:var(--green)}
+.toast.error .toast-icon{background:var(--red)}
+.toast.info .toast-icon{background:var(--blue)}
+.toast-body{flex:1;min-width:0}
+.toast-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.toast-msg{font-size:12px;color:var(--muted);line-height:1.4}
+.toast-close{font-size:16px;color:var(--muted2);cursor:pointer;line-height:1;padding:2px 4px;margin:-2px -4px}
+.toast-close:hover{color:var(--text)}
+@keyframes toastIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.out{animation:toastOut 0.2s forwards}
+@keyframes toastOut{to{transform:translateX(20px);opacity:0}}
+
+/* Progress bar */
+.progress-wrap{width:280px;max-width:80vw;margin-top:6px}
+.progress-bar{width:100%;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#000,#555,#000);background-size:200% 100%;border-radius:2px;transition:width 0.4s ease;animation:progShimmer 1.4s linear infinite}
+@keyframes progShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.progress-stages{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;font-weight:600}
+.progress-stage{flex:1;text-align:center;transition:color 0.3s}
+.progress-stage.active{color:var(--text)}
+.progress-stage.done{color:var(--green)}
+
 .avatar-wrap{position:relative;cursor:pointer}
 .avatar-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:180px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:50}
 .avatar-wrap.open .avatar-menu{display:block}
@@ -223,9 +252,20 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
   </div>
 </div>
 
+<div class="toast-container" id="toast-container"></div>
+
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loadingText">Signing in...</div>
+  <div class="progress-wrap" id="progress-wrap" style="display:none">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-stages">
+      <div class="progress-stage" id="stage-1">Read</div>
+      <div class="progress-stage" id="stage-2">Detect</div>
+      <div class="progress-stage" id="stage-3">Analyze</div>
+      <div class="progress-stage" id="stage-4">Report</div>
+    </div>
+  </div>
 </div>
 
 <!-- DASHBOARD -->
@@ -584,8 +624,86 @@ function applyResponse(data,label){
   refreshDatasetDropdown(); // new upload → refresh list with new entry selected
 }
 
-function showLoading(msg){ const o=document.getElementById('loadingOverlay'),t=document.getElementById('loadingText'); o.style.display='flex'; t.textContent=msg; }
+function showLoading(msg){
+  document.getElementById('loadingOverlay').style.display='flex';
+  document.getElementById('loadingText').textContent=msg;
+  document.getElementById('progress-wrap').style.display='none';
+}
 function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
+
+// ── TOAST NOTIFICATIONS ──
+let toastId = 0;
+function showToast(title, msg, type='info', duration=4500){
+  const container = document.getElementById('toast-container');
+  const id = 'toast-'+(++toastId);
+  const iconChar = type==='success'?'\u2713':type==='error'?'!':'i';
+  const el = document.createElement('div');
+  el.className = 'toast '+type;
+  el.id = id;
+  el.innerHTML = `
+    <div class="toast-icon">${iconChar}</div>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${msg?`<div class="toast-msg">${msg}</div>`:''}
+    </div>
+    <div class="toast-close" onclick="dismissToast('${id}')">\u00d7</div>
+  `;
+  container.appendChild(el);
+  if(duration>0) setTimeout(()=>dismissToast(id), duration);
+}
+function dismissToast(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add('out');
+  setTimeout(()=>el.remove(), 200);
+}
+
+// ── STAGED PROGRESS ──
+// Stages: Read (0-5%), Detect (5-15%), Analyze (15-92%), Report (92-100%)
+let progressTimer = null;
+function startProgress(){
+  const wrap = document.getElementById('progress-wrap');
+  const fill = document.getElementById('progress-fill');
+  wrap.style.display='block';
+  fill.style.width='0%';
+  ['stage-1','stage-2','stage-3','stage-4'].forEach(s=>{
+    document.getElementById(s).classList.remove('active','done');
+  });
+  setProgressStage(1, 'Reading CSV file...');
+  let pct = 0;
+  const tick = () => {
+    // Smoothly progress to 90% over ~30s, leaving the last 10% for completion
+    if(pct < 4){ pct += 0.4; setProgressStage(1, 'Reading CSV file...'); }
+    else if(pct < 14){ pct += 0.35; setProgressStage(2, 'Detecting breaks with the rules engine...'); }
+    else if(pct < 90){ pct += 0.35; setProgressStage(3, null); }
+    fill.style.width = pct + '%';
+  };
+  progressTimer = setInterval(tick, 120);
+}
+function setProgressStage(stageNum, msg){
+  const stages=['stage-1','stage-2','stage-3','stage-4'];
+  stages.forEach((s,i)=>{
+    const el = document.getElementById(s);
+    el.classList.remove('active','done');
+    if(i+1 < stageNum) el.classList.add('done');
+    else if(i+1 === stageNum) el.classList.add('active');
+  });
+  if(msg) document.getElementById('loadingText').textContent = msg;
+}
+function updateAnalyzeProgress(hintMsg){
+  // Called periodically during long Claude wait to rotate helpful hints
+  if(hintMsg) document.getElementById('loadingText').textContent = hintMsg;
+}
+function finishProgress(){
+  if(progressTimer){ clearInterval(progressTimer); progressTimer=null; }
+  const fill = document.getElementById('progress-fill');
+  setProgressStage(4, 'Generating report...');
+  fill.style.width = '100%';
+}
+function stopProgress(){
+  if(progressTimer){ clearInterval(progressTimer); progressTimer=null; }
+  document.getElementById('progress-wrap').style.display='none';
+}
 
 // ── DATASET DROPDOWN (from DB) ──
 let currentDatasetId = null;
@@ -617,7 +735,7 @@ async function loadSavedDataset(id){
     analyses = data.analyses || [];
     chartData = data.chart_data || null;
     updateDashboard(data.name);
-  } catch(e) { hideLoading(); alert('Failed to load dataset: '+e.message); }
+  } catch(e) { hideLoading(); showToast('Could not load dataset', e.message, 'error'); }
 }
 
 // ── LOGIN (real auth with token persistence) ──
@@ -719,17 +837,41 @@ async function handleFileUpload(input){
     input.value=''; return;
   }
 
-  showLoading('Reading file...');
+  showLoading('Reading CSV file...');
+  startProgress();
+
+  // Rotating hints during the long Claude wait
+  const hints = [
+    'Reading transactions...',
+    'Running reconciliation rules...',
+    'Asking Claude to explain each break...',
+    'Claude is reviewing root causes...',
+    'Scoring priority and confidence...',
+    'Preparing recommended actions...',
+  ];
+  let hintIdx = 0;
+  const hintTimer = setInterval(()=>{
+    hintIdx = (hintIdx + 1) % hints.length;
+    if(document.getElementById('progress-fill').style.width !== '100%'){
+      updateAnalyzeProgress(hints[hintIdx]);
+    }
+  }, 3500);
+
   try {
-    setTimeout(()=>document.getElementById('loadingText').textContent='Processing transactions...',500);
     const form = new FormData(); form.append('file',file);
     const data = await callAnalyze(form);
-    document.getElementById('loadingText').textContent='Generating report...';
-    await new Promise(r=>setTimeout(r,400));
+    clearInterval(hintTimer);
+    finishProgress();
+    await new Promise(r=>setTimeout(r,500));
     hideLoading();
+    stopProgress();
     applyResponse(data,file.name);
+    const s = data.summary;
+    showToast('Analysis complete', s.breaks_found+' break'+(s.breaks_found===1?'':'s')+' detected across '+s.total_transactions+' transactions', 'success');
   } catch(e) {
+    clearInterval(hintTimer);
     hideLoading();
+    stopProgress();
     showUploadError(e.message);
   }
   input.value='';
@@ -845,10 +987,11 @@ async function saveRule() {
   const method = editingRuleId ? 'PUT' : 'POST';
   try {
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!res.ok) { const err = await res.json(); alert('Error: ' + (err.detail || res.statusText)); return; }
+    if (!res.ok) { const err = await res.json(); showToast('Could not save rule', err.detail || res.statusText, 'error'); return; }
     hideRuleForm();
+    showToast(editingRuleId ? 'Rule updated' : 'Rule created', '', 'success');
     loadRules();
-  } catch (e) { alert('Failed to save rule: ' + e.message); }
+  } catch (e) { showToast('Could not save rule', e.message, 'error'); }
 }
 
 async function editRule(id) {
@@ -856,7 +999,7 @@ async function editRule(id) {
     const res = await fetch(API_BASE + '/rules/' + id);
     const rule = await res.json();
     showRuleForm(rule);
-  } catch (e) { alert('Failed to load rule: ' + e.message); }
+  } catch (e) { showToast('Could not load rule', e.message, 'error'); }
 }
 
 async function deleteRule(id) {
@@ -864,7 +1007,7 @@ async function deleteRule(id) {
   try {
     await fetch(API_BASE + '/rules/' + id, { method: 'DELETE' });
     loadRules();
-  } catch (e) { alert('Failed to delete rule: ' + e.message); }
+  } catch (e) { showToast('Could not delete rule', e.message, 'error'); }
 }
 
 async function resetRules() {
@@ -877,10 +1020,11 @@ async function resetRules() {
     btn.textContent = 'Reset defaults';
     btn.disabled = false;
     loadRules();
+    showToast('Rules restored', '9 default rules are now active', 'success');
   } catch (e) {
     btn.textContent = 'Reset defaults';
     btn.disabled = false;
-    alert('Failed to reset rules: ' + e.message);
+    showToast('Could not reset rules', e.message, 'error');
   }
 }
 </script>
