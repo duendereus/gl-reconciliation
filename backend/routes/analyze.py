@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import BusinessRule, SavedDataset
+from backend.routes.auth import require_write_access
 from backend.services.claude_client import BreakAnalysis, analyze_breaks
 from backend.services.csv_validator import ValidationError, validate_csv
 from backend.services.reconciliation import run_reconciliation
@@ -25,6 +26,7 @@ async def analyze(
     file: UploadFile | None = File(None),
     dataset_id: str | None = Form(None),
     db: Session = Depends(get_db),
+    _: None = Depends(require_write_access),
 ):
     """Analyze a CSV for reconciliation breaks.
 

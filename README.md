@@ -25,12 +25,14 @@ For each break, the AI provides a plain-English root cause, a specific recommend
 The interactive demo is in `comp_files/widget.html`. Open it directly in any browser — no build step required.
 
 **Login credentials (pre-filled):**
+
 ```
-Username: nicolas
+Username: demo
 Password: ••••••••••
 ```
 
 **What to explore:**
+
 1. **Breaks tab** — click any row to see the AI analysis panel
 2. **Traceability tab** — expand each accordion to see how the model reached its decision
 3. **Data Explorer tab** — scatter plot shows break outliers vs normal transactions visually
@@ -137,17 +139,17 @@ GET /datasets
 
 Both datasets contain realistic fintech transaction structures:
 
-| Field | Description |
-|---|---|
-| `txn_id` | Unique transaction identifier |
-| `type` | FX_TRANSFER, SWIFT_INTERNATIONAL, CORPORATE_CARD, SAVINGS_ACCOUNT, SPEI |
-| `amount_usd` | Transaction amount in USD |
-| `amount_mxn` | Equivalent in MXN |
-| `rate_applied` | FX rate used at processing time |
-| `timestamp` | ISO 8601 datetime |
-| `status` | COMPLETED, DISPATCHED, PENDING |
-| `counterparty` | Destination bank or entity |
-| `client_tier` | RETAIL, CORPORATE_T1, CORPORATE_T2 |
+| Field          | Description                                                             |
+| -------------- | ----------------------------------------------------------------------- |
+| `txn_id`       | Unique transaction identifier                                           |
+| `type`         | FX_TRANSFER, SWIFT_INTERNATIONAL, CORPORATE_CARD, SAVINGS_ACCOUNT, SPEI |
+| `amount_usd`   | Transaction amount in USD                                               |
+| `amount_mxn`   | Equivalent in MXN                                                       |
+| `rate_applied` | FX rate used at processing time                                         |
+| `timestamp`    | ISO 8601 datetime                                                       |
+| `status`       | COMPLETED, DISPATCHED, PENDING                                          |
+| `counterparty` | Destination bank or entity                                              |
+| `client_tier`  | RETAIL, CORPORATE_T1, CORPORATE_T2                                      |
 
 Breaks are seeded at specific rows to guarantee consistent demo output.
 

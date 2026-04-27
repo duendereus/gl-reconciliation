@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import BusinessRule
+from backend.routes.auth import require_write_access
 
 router = APIRouter()
 
@@ -85,7 +86,7 @@ def get_rule(rule_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-def create_rule(data: RuleCreate, db: Session = Depends(get_db)):
+def create_rule(data: RuleCreate, db: Session = Depends(get_db), _: None = Depends(require_write_access)):
     _validate_rule(data)
     rule = BusinessRule(**data.model_dump())
     db.add(rule)
@@ -95,7 +96,7 @@ def create_rule(data: RuleCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{rule_id}")
-def update_rule(rule_id: int, data: RuleUpdate, db: Session = Depends(get_db)):
+def update_rule(rule_id: int, data: RuleUpdate, db: Session = Depends(get_db), _: None = Depends(require_write_access)):
     _validate_rule(data)
     rule = db.query(BusinessRule).filter(BusinessRule.id == rule_id).first()
     if not rule:
@@ -108,7 +109,7 @@ def update_rule(rule_id: int, data: RuleUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{rule_id}", status_code=204)
-def delete_rule(rule_id: int, db: Session = Depends(get_db)):
+def delete_rule(rule_id: int, db: Session = Depends(get_db), _: None = Depends(require_write_access)):
     rule = db.query(BusinessRule).filter(BusinessRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
@@ -237,12 +238,12 @@ def seed_default_rules(db: Session) -> dict:
 
 
 @router.post("/seed", status_code=201)
-def seed_endpoint(db: Session = Depends(get_db)):
+def seed_endpoint(db: Session = Depends(get_db), _: None = Depends(require_write_access)):
     return seed_default_rules(db)
 
 
 @router.post("/reset", status_code=201)
-def reset_rules(db: Session = Depends(get_db)):
+def reset_rules(db: Session = Depends(get_db), _: None = Depends(require_write_access)):
     """Delete all rules and re-seed defaults."""
     db.query(BusinessRule).delete()
     db.commit()

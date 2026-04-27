@@ -48,21 +48,42 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
 
-    # Seed/update demo user on startup (rules are seeded via "Reset defaults" button)
+    # Seed/update demo + admin users on startup
     from backend.database import SessionLocal
     from backend.models import User
-    DISPLAY_NAME = "Nicolas S."
-    ROLE = "Head of Strategy and Operations"
+
+    accounts = [
+        {
+            "username": os.getenv("DEMO_USERNAME", "demo"),
+            "password": os.getenv("DEMO_PASSWORD", "demo2026"),
+            "display_name": os.getenv("DEMO_DISPLAY_NAME", "Demo User"),
+            "role": os.getenv("DEMO_ROLE", "Finance Operations · Demo Account"),
+            "is_admin": False,
+        },
+        {
+            "username": os.getenv("ADMIN_USERNAME", "admin"),
+            "password": os.getenv("ADMIN_PASSWORD", "changeme"),
+            "display_name": os.getenv("ADMIN_DISPLAY_NAME", "Admin"),
+            "role": os.getenv("ADMIN_ROLE", "Owner"),
+            "is_admin": True,
+        },
+    ]
+
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == "nicolas").first()
-        if not user:
-            db.add(User(username="nicolas", password="revolut2026", display_name=DISPLAY_NAME, role=ROLE))
-            logger.info("Seeded demo user: nicolas")
-        elif user.display_name != DISPLAY_NAME or user.role != ROLE:
-            user.display_name = DISPLAY_NAME
-            user.role = ROLE
-            logger.info("Updated demo user display_name/role")
+        for acc in accounts:
+            user = db.query(User).filter(User.username == acc["username"]).first()
+            if not user:
+                db.add(User(**acc))
+                logger.info("Seeded user: %s (admin=%s)", acc["username"], acc["is_admin"])
+            else:
+                changed = False
+                for k, v in acc.items():
+                    if getattr(user, k) != v:
+                        setattr(user, k, v)
+                        changed = True
+                if changed:
+                    logger.info("Updated user: %s", acc["username"])
         db.commit()
     finally:
         db.close()

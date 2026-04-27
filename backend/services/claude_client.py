@@ -210,7 +210,7 @@ def build_fallback_analysis(brk: Break) -> BreakAnalysis:
                 label="Impact",
                 val=f"<code>${brk.impact_mxn:,.2f} MXN</code>",
             ),
-            TraceStep(label="Status", val="Pending manual review — R. AI temporarily unavailable"),
+            TraceStep(label="Status", val="Pending manual review — F. AI temporarily unavailable"),
         ],
     )
 

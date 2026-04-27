@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>R. · GL Reconciliation</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0a0a'/><text x='50%25' y='73%25' text-anchor='middle' font-family='sans-serif' font-weight='700' font-size='20' fill='white'>R.</text></svg>">
+<title>F. · GL Reconciliation</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a1f15'/><text x='50%25' y='73%25' text-anchor='middle' font-family='sans-serif' font-weight='700' font-size='20' fill='white'>F.</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#fff;--surface:#f7f7f7;--surface2:#efefef;--border:#e5e5e5;--border2:#d0d0d0;--text:#0a0a0a;--muted:#888;--muted2:#aaa;--red:#e0193a;--amber:#d97706;--green:#059669;--blue:#1a56db}
+:root{--bg:#fff;--surface:#f7f7f7;--surface2:#efefef;--border:#e5e5e5;--border2:#d0d0d0;--text:#0a0a0a;--dark:#0a1f15;--dark2:#0e2a1d;--muted:#888;--muted2:#aaa;--red:#e0193a;--amber:#d97706;--green:#10b981;--green-soft:#ecfdf5;--green-border:#a7f3d0;--blue:#1a56db;--accent:#10b981}
 body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .login-screen{display:flex;min-height:100vh}
-.login-left{flex:1;background:#000;display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem;min-height:100vh}
+.login-left{flex:1;background:var(--dark);display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem;min-height:100vh}
 .login-right{flex:1;min-width:420px;max-width:640px;display:flex;align-items:center;justify-content:center;padding:3rem 4rem;background:#fff}
 .r-logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em}
 .login-tagline{font-size:32px;font-weight:600;color:#fff;line-height:1.2;letter-spacing:-0.02em}
@@ -23,31 +23,31 @@ body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var
 .field{margin-bottom:1rem}
 .field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .field input{width:100%;padding:11px 14px;background:#fff;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s}
-.field input:focus{border-color:#000}
-.login-btn{width:100%;padding:13px;background:#000;border:none;border-radius:8px;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:0.25rem;transition:background 0.15s,transform 0.1s}
-.login-btn:hover{background:#222}
+.field input:focus{border-color:var(--dark)}
+.login-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:0.25rem;transition:background 0.15s,transform 0.1s}
+.login-btn:hover{background:#0fa372}
 .login-btn:active{transform:scale(0.99)}
 .login-hint{margin-top:1rem;font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px}
-.dot{width:6px;height:6px;border-radius:50%;background:#059669;flex-shrink:0}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.93);align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:10px}
-.spinner{width:28px;height:28px;border:2px solid #e5e5e5;border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite}
+.spinner{width:28px;height:28px;border:2px solid #e5e5e5;border-top-color:var(--dark);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:13px;color:var(--muted);font-weight:500}
 .dashboard{display:none;min-height:100vh;flex-direction:column}
 .topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:#fff;position:sticky;top:0;z-index:20}
 .topbar-logo{font-size:16px;font-weight:700;letter-spacing:-0.02em}
 .topbar-right{display:flex;align-items:center;gap:12px}
-.badge-live{font-size:10px;padding:3px 9px;background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0;border-radius:20px;letter-spacing:0.04em;text-transform:uppercase;font-weight:600}
-.avatar{width:30px;height:30px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.badge-live{font-size:10px;padding:3px 9px;background:var(--green-soft);color:var(--accent);border:1px solid var(--green-border);border-radius:20px;letter-spacing:0.04em;text-transform:uppercase;font-weight:600}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
 .subbar{border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:#fff;position:sticky;top:52px;z-index:10;height:56px;gap:1rem}
 .tab-bar{display:flex;align-items:center;gap:8px}
 button.tab-btn{font-size:12px;font-weight:500;padding:7px 20px;border-radius:999px;border:1.5px solid #d0d0d0;background:#ffffff;color:#888;font-family:'Bricolage Grotesque',sans-serif;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;line-height:1.5;display:inline-block}
-button.tab-btn:hover{border-color:#000;color:#0a0a0a}
-button.tab-btn.active{background:#000000!important;border-color:#000000!important;color:#ffffff!important;font-weight:600}
+button.tab-btn:hover{border-color:var(--dark);color:var(--dark)}
+button.tab-btn.active{background:var(--dark)!important;border-color:var(--dark)!important;color:#ffffff!important;font-weight:600}
 .dataset-selector{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .dataset-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);white-space:nowrap}
 .dataset-select{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:500;color:var(--text);background:#fff;border:1.5px solid var(--border2);border-radius:8px;padding:6px 28px 6px 10px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color 0.15s;max-width:240px}
-.dataset-select:hover{border-color:#000}
+.dataset-select:hover{border-color:var(--dark)}
 .content{padding:1.5rem;flex:1}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
@@ -58,10 +58,10 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .stat-sub{font-size:11px;color:var(--muted2);margin-top:3px}
 .stat-value.red{color:var(--red)}.stat-value.amber{color:var(--amber)}.stat-value.green{color:var(--green)}
 .upload-area{background:#fff;border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;display:flex;flex-direction:column;justify-content:center}
-.upload-area:hover{border-color:#000;background:var(--surface)}
+.upload-area:hover{border-color:var(--dark);background:var(--surface)}
 .upload-title{font-size:13px;font-weight:500;margin-bottom:3px}
 .upload-sub{font-size:12px;color:var(--muted)}
-.upload-sub span{color:#000;font-weight:500;text-decoration:underline;cursor:pointer}
+.upload-sub span{color:var(--dark);font-weight:500;text-decoration:underline;cursor:pointer}
 .download-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--blue);font-weight:500;text-decoration:underline;cursor:pointer;margin-top:8px}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem}
 .section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)}
@@ -80,19 +80,20 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .txn-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);font-weight:500}
 .impact-neg{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--red)}
 .action-btn{font-size:11px;padding:5px 10px;background:#fff;border:1.5px solid var(--border2);border-radius:6px;color:var(--muted);cursor:pointer;transition:all 0.15s;font-family:'Bricolage Grotesque',sans-serif;font-weight:500}
-.action-btn:hover{border-color:#000;color:#000}
+.action-btn:hover{border-color:var(--dark);color:var(--dark)}
 .analysis-panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem}
 .analysis-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
 .analysis-title-text{font-size:14px;font-weight:600;letter-spacing:-0.01em}
-.ai-badge{font-size:10px;padding:3px 9px;background:#000;color:#fff;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+.ai-badge{font-size:10px;padding:3px 9px;background:var(--accent);color:#fff;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.ai-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:#fff;display:inline-block}
 .analysis-body{font-size:13px;color:#444;line-height:1.75}
-.analysis-body strong{color:#000;font-weight:600}
+.analysis-body strong{color:var(--dark);font-weight:600}
 .analysis-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem}
 .analysis-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
 .ai-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:600;margin-bottom:5px}
 .ai-value{font-size:14px;font-weight:600;font-family:'IBM Plex Mono',monospace}
 .ai-value.green{color:var(--green)}.ai-value.amber{color:var(--amber)}.ai-value.blue{color:var(--blue)}.ai-value.red{color:var(--red)}
-.time-banner{background:#000;border-radius:10px;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.time-banner{background:var(--dark);border-radius:10px;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
 .time-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;margin-bottom:4px}
 .time-value{font-size:32px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:#fff;letter-spacing:-0.02em}
 .time-sub{font-size:12px;color:#666;margin-top:4px}
@@ -108,13 +109,13 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .trace-steps{display:flex;flex-direction:column}
 .trace-step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
 .trace-step:last-child{border-bottom:none}
-.step-num{width:22px;height:22px;border-radius:50%;background:#000;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--dark);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .step-content{flex:1}
 .step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px}
 .step-value{font-size:13px;color:var(--text)}
 .step-value code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border)}
 .confidence-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden}
-.confidence-fill{height:100%;background:#000;border-radius:2px}
+.confidence-fill{height:100%;background:var(--dark);border-radius:2px}
 .rule-tag{font-size:10px;padding:2px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:'IBM Plex Mono',monospace;color:var(--muted);font-weight:500}
 .chevron{font-size:10px;color:var(--muted);transition:transform 0.2s;display:inline-block}
 .chevron.open{transform:rotate(180deg)}
@@ -135,10 +136,10 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .break-drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)}
 .break-drawer-title{font-size:13px;font-weight:600;letter-spacing:-0.01em}
 .break-drawer-body{font-size:13px;color:#444;line-height:1.75}
-.break-drawer-body strong{color:#000;font-weight:600}
+.break-drawer-body strong{color:var(--dark);font-weight:600}
 .break-drawer-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem}
 .table-row.active-row{background:#f5f5f5 !important;border-bottom:none}
-.table-row.active-row .action-btn{background:#000;color:#fff;border-color:#000}
+.table-row.active-row .action-btn{background:var(--dark);color:#fff;border-color:var(--dark)}
 
 /* Tour animations */
 @keyframes tourFade{from{opacity:0}to{opacity:1}}
@@ -167,7 +168,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 /* Progress bar */
 .progress-wrap{width:280px;max-width:80vw;margin-top:6px}
 .progress-bar{width:100%;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,#000,#555,#000);background-size:200% 100%;border-radius:2px;transition:width 0.4s ease;animation:progShimmer 1.4s linear infinite}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--dark),#10b981,var(--dark));background-size:200% 100%;border-radius:2px;transition:width 0.4s ease;animation:progShimmer 1.4s linear infinite}
 @keyframes progShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .progress-stages{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;font-weight:600}
 .progress-stage{flex:1;text-align:center;transition:color 0.3s}
@@ -183,7 +184,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 .avatar-menu-item{font-size:13px;color:var(--red);cursor:pointer;padding:4px 0;font-weight:500}
 .avatar-menu-item:hover{opacity:0.7}
 .field select{width:100%;padding:11px 14px;background:#fff;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:14px;outline:none;cursor:pointer}
-.field select:focus{border-color:#000}
+.field select:focus{border-color:var(--dark)}
 .rule-active{font-size:11px;padding:2px 10px;border-radius:20px;font-weight:600}
 .rule-active.on{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0}
 .rule-active.off{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
@@ -259,20 +260,23 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen" style="display:none">
   <div class="login-left">
-    <div class="r-logo">R.</div>
+    <div class="r-logo">F.</div>
     <div class="login-tagline">Reconciliation<br><span>powered by AI.</span></div>
-    <div style="font-size:12px;color:#444">Finance ops · Mexico</div>
+    <div style="font-size:12px;color:#444">A case study in productizing LLMs for finance ops</div>
   </div>
   <div class="login-right">
     <div class="login-box">
-      <div class="login-label">R. · Finance Ops</div>
+      <div class="login-label">F. · Reconciliation Demo</div>
       <div class="login-title">Sign in</div>
-      <div class="login-sub">Welcome back to your workspace</div>
-      <div class="field"><label>Username</label><input type="text" id="login-user" value="nicolas"></div>
-      <div class="field"><label>Password</label><input type="password" id="login-pass" value="revolut2026"></div>
+      <div class="login-sub">Live demo · explore the product end-to-end</div>
+      <div class="field"><label>Username</label><input type="text" id="login-user" value="demo"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-pass" value="demo2026"></div>
       <div id="login-error" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button class="login-btn" onclick="doLogin()">Continue →</button>
-      <div class="login-hint"><div class="dot"></div>Demo environment · credentials pre-filled</div>
+      <div class="login-hint"><div class="dot"></div>Read-only demo · credentials pre-filled</div>
+      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);font-size:11px;color:var(--muted2);line-height:1.5">
+        Built by <a href="https://www.linkedin.com/in/fernandocespedesm/" target="_blank" rel="noopener" style="color:var(--text);text-decoration:underline;font-weight:500">Fernando Céspedes</a> · A portfolio project showcasing AI x finance ops · All data shown is synthetic.
+      </div>
     </div>
   </div>
 </div>
@@ -296,15 +300,16 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 <!-- DASHBOARD -->
 <div class="dashboard" id="dashboard">
   <div class="topbar">
-    <div class="topbar-logo">R.</div>
+    <div class="topbar-logo">F.</div>
     <div class="topbar-right">
       <div class="badge-live">● Live</div>
+      <div id="readonly-badge" style="display:none;font-size:10px;padding:3px 9px;background:#fffbeb;color:var(--amber);border:1px solid #fde68a;border-radius:20px;letter-spacing:0.04em;text-transform:uppercase;font-weight:600">● Read-only</div>
       <div style="font-size:12px;color:var(--muted)">Apr 12, 2026</div>
       <div class="avatar-wrap" onclick="this.classList.toggle('open')">
-        <div class="avatar">NS</div>
+        <div class="avatar" id="avatar-initials">DU</div>
         <div class="avatar-menu">
-          <div class="avatar-menu-name">Nicolas S.</div>
-          <div class="avatar-menu-role">Head of Strategy and Operations</div>
+          <div class="avatar-menu-name">Demo User</div>
+          <div class="avatar-menu-role">Finance Operations · Demo Account</div>
           <div class="avatar-menu-sep"></div>
           <div class="avatar-menu-item" onclick="event.stopPropagation();doLogout()">Sign out</div>
         </div>
@@ -344,7 +349,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
         <div class="upload-area" onclick="document.getElementById('csv-input').click()">
           <div style="font-size:22px;margin-bottom:6px">↑</div>
           <div class="upload-title">Upload transaction file</div>
-          <div class="upload-sub">CSV · or <span>browse files</span></div>
+          <div class="upload-sub" id="upload-sub-text">CSV · or <span>browse files</span></div>
         </div>
         <div class="sample-card" id="sample-card" onclick="window.open(API_BASE+'/static/dataset_2.csv')">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Try it with sample data</div>
@@ -412,7 +417,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
         </div>
         <div style="display:flex;gap:8px">
           <button class="action-btn" onclick="resetRules()" id="reset-btn">Reset defaults</button>
-          <button class="action-btn" style="background:#0a0a0a;color:#fff" onclick="showRuleForm()">+ Add rule</button>
+          <button class="action-btn" style="background:var(--dark);color:#fff" onclick="showRuleForm()">+ Add rule</button>
         </div>
       </div>
 
@@ -458,7 +463,7 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
           </div>
         </div>
         <div style="margin-top:12px;text-align:right">
-          <button class="action-btn" style="background:#0a0a0a;color:#fff;padding:8px 20px" onclick="saveRule()" id="rule-save-btn">Save rule</button>
+          <button class="action-btn" style="background:var(--dark);color:#fff;padding:8px 20px" onclick="saveRule()" id="rule-save-btn">Save rule</button>
         </div>
       </div>
 
@@ -480,6 +485,41 @@ button.tab-btn.active{background:#000000!important;border-color:#000000!importan
 // ── CONFIG ──
 const API_BASE = window.location.origin;
 let authToken = localStorage.getItem('auth_token') || '';
+let appConfig = {read_only: false};
+function canWrite(){ return !appConfig.read_only || (currentUser && currentUser.is_admin); }
+
+function applyReadOnlyMode(){
+  // Show "Read-only" badge if applicable
+  const badge = document.getElementById('readonly-badge');
+  if(badge) badge.style.display = (appConfig.read_only && !canWrite()) ? 'inline-flex' : 'none';
+
+  const writable = canWrite();
+  // Upload area
+  const upArea = document.querySelector('.upload-area');
+  const sample = document.getElementById('sample-card');
+  if(upArea){
+    upArea.style.opacity = writable ? '1' : '0.55';
+    upArea.style.cursor = writable ? 'pointer' : 'not-allowed';
+    upArea.style.pointerEvents = writable ? '' : 'none';
+  }
+  const upSub = document.getElementById('upload-sub-text');
+  if(upSub){
+    upSub.innerHTML = writable
+      ? 'CSV · or <span>browse files</span>'
+      : 'Disabled in read-only demo · explore saved datasets below';
+  }
+  if(sample){
+    // Sample card stays clickable so visitors can download the CSV
+    sample.style.opacity = '1';
+  }
+  // Rules: hide Add / Reset buttons + Edit/Del per row
+  const addBtn = document.querySelector('[onclick="showRuleForm()"]');
+  const resetBtn = document.getElementById('reset-btn');
+  if(addBtn) addBtn.style.display = writable ? '' : 'none';
+  if(resetBtn) resetBtn.style.display = writable ? '' : 'none';
+  // Re-render rules table to reflect button visibility
+  if(typeof loadRules === 'function' && document.getElementById('rules-tbody')) loadRules();
+}
 let currentUser = null;
 
 function authHeaders(){ return authToken ? {Authorization:'Bearer '+authToken} : {}; }
@@ -821,9 +861,14 @@ async function enterDashboard(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('dashboard').style.display='flex';
   if(currentUser){
-    document.querySelector('.avatar-menu-name').textContent = currentUser.display_name || currentUser.username;
+    const name = currentUser.display_name || currentUser.username;
+    document.querySelector('.avatar-menu-name').textContent = name;
     document.querySelector('.avatar-menu-role').textContent = currentUser.role || '';
+    const parts = name.split(/\s+/).filter(Boolean);
+    const initials = parts.length >= 2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'??');
+    document.getElementById('avatar-initials').textContent = initials;
   }
+  applyReadOnlyMode();
   // Load the most recent dataset if any
   await refreshDatasetDropdown();
   const sel = document.getElementById('dataset-select');
@@ -895,7 +940,7 @@ async function handleFileUpload(input){
   const hints = [
     'Reading transactions...',
     'Running reconciliation rules...',
-    'R. AI is analyzing each break...',
+    'F. AI is analyzing each break...',
     'Reviewing root causes...',
     'Scoring priority and confidence...',
     'Preparing recommended actions...',
@@ -930,6 +975,12 @@ async function handleFileUpload(input){
 
 // ── AUTO-INIT ──
 (async function init(){
+  // Fetch deploy config (read_only flag)
+  try {
+    const r = await fetch(API_BASE+'/auth/config');
+    appConfig = await r.json();
+  } catch(e) { appConfig = {read_only: false}; }
+
   const restored = await tryRestoreSession();
   if(restored){
     enterDashboard();
@@ -942,17 +993,17 @@ async function handleFileUpload(input){
 function buildCharts(){
   if(chartsBuilt || !chartData) return; chartsBuilt=true;
   const cd = chartData;
-  const gray='#888',black='#0a0a0a',bdr='#e5e5e5';
-  const colors=['#0a0a0a','#555','#888','#bbb','#ccc'];
+  const gray='#888',black='#0a1f15',bdr='#e5e5e5';
+  const colors=['#0a1f15','#1d4a36','#5c8a76','#a3c2b5','#cfddd6'];
   const totalTx = summary ? summary.total_transactions : 100;
 
   chartInstances.type=new Chart(document.getElementById('chartType'),{type:'doughnut',data:{labels:cd.type_labels,datasets:[{data:cd.type_data,backgroundColor:colors,borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11,family:'Bricolage Grotesque'},color:gray,boxWidth:10,padding:12}}}}});
 
   const hours=Array.from({length:24},(_,i)=>i);
-  chartInstances.time=new Chart(document.getElementById('chartTime'),{type:'bar',data:{labels:hours.map(h=>h+':00'),datasets:[{data:cd.hour_data,backgroundColor:'#0a0a0a',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},color:gray,maxRotation:0,callback:(v,i)=>i%4===0?hours[i]+':00':''},grid:{display:false}},y:{ticks:{font:{size:10},color:gray},grid:{color:bdr}}}}});
+  chartInstances.time=new Chart(document.getElementById('chartTime'),{type:'bar',data:{labels:hours.map(h=>h+':00'),datasets:[{data:cd.hour_data,backgroundColor:'#0a1f15',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},color:gray,maxRotation:0,callback:(v,i)=>i%4===0?hours[i]+':00':''},grid:{display:false}},y:{ticks:{font:{size:10},color:gray},grid:{color:bdr}}}}});
 
   const normal=[];for(let i=0;i<cd.scatter_normal_count;i++){normal.push({x:Math.floor(Math.random()*totalTx)+1,y:Math.round((Math.random()*4000+200)*100)/100});}
-  chartInstances.scatter=new Chart(document.getElementById('chartScatter'),{type:'scatter',data:{datasets:[{label:'Normal',data:normal,backgroundColor:'rgba(10,10,10,0.2)',pointRadius:4,pointHoverRadius:6},{label:'Break detected',data:cd.outliers,backgroundColor:'#e0193a',pointRadius:8,pointHoverRadius:10}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11,family:'Bricolage Grotesque'},color:gray,boxWidth:10}}},scales:{x:{title:{display:true,text:'Transaction #',font:{size:11},color:gray},ticks:{color:gray,font:{size:10}},grid:{color:bdr}},y:{title:{display:true,text:'Amount (MXN)',font:{size:11},color:gray},ticks:{color:gray,font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:bdr}}}}});
+  chartInstances.scatter=new Chart(document.getElementById('chartScatter'),{type:'scatter',data:{datasets:[{label:'Normal',data:normal,backgroundColor:'rgba(10,31,21,0.2)',pointRadius:4,pointHoverRadius:6},{label:'Break detected',data:cd.outliers,backgroundColor:'#e0193a',pointRadius:8,pointHoverRadius:10}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11,family:'Bricolage Grotesque'},color:gray,boxWidth:10}}},scales:{x:{title:{display:true,text:'Transaction #',font:{size:11},color:gray},ticks:{color:gray,font:{size:10}},grid:{color:bdr}},y:{title:{display:true,text:'Amount (MXN)',font:{size:11},color:gray},ticks:{color:gray,font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:bdr}}}}});
 
   chartInstances.bar=new Chart(document.getElementById('chartBar'),{type:'bar',data:{labels:cd.bar_labels,datasets:[{data:cd.bar_data,backgroundColor:colors,borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:gray,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:bdr}},y:{ticks:{color:black,font:{size:12,family:'Bricolage Grotesque'}},grid:{display:false}}}}});
 }
@@ -960,7 +1011,7 @@ function buildCharts(){
 // ── CLOSE AVATAR MENU ON OUTSIDE CLICK ──
 document.addEventListener('click',e=>{ if(!e.target.closest('.avatar-wrap')) document.querySelectorAll('.avatar-wrap.open').forEach(el=>el.classList.remove('open')); });
 
-// ── EXPORT PDF (Revolut-branded) ──
+// ── EXPORT PDF (F.-branded) ──
 function stripHtml(html){ const d=document.createElement('div'); d.innerHTML=html||''; return (d.textContent||d.innerText||'').trim(); }
 
 function buildNextSteps(brks){
@@ -1011,11 +1062,11 @@ function exportPDF(){
 
     // ── HELPERS ──
     const addHeader = () => {
-      doc.setFillColor(10,10,10);
+      doc.setFillColor(10,31,21);
       doc.rect(0, 0, W, 32, 'F');
       doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold'); doc.setFontSize(11);
-      doc.text('R.', M, 21);
+      doc.text('F.', M, 21);
       doc.setFont('helvetica','normal'); doc.setFontSize(9);
       doc.setTextColor(200,200,200);
       doc.text('GL Reconciliation · Confidential', M+22, 21);
@@ -1025,25 +1076,28 @@ function exportPDF(){
     const addFooter = (pageNum, pageTotal) => {
       doc.setDrawColor(229,229,229);
       doc.setLineWidth(0.5);
-      doc.line(M, H-38, W-M, H-38);
-      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.line(M, H-44, W-M, H-44);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+      doc.setTextColor(170,170,170);
+      doc.text('Demo project · Synthetic data · For illustration only', M, H-30);
+      doc.setFontSize(8);
       doc.setTextColor(136,136,136);
-      doc.text('R. · AI-powered reconciliation', M, H-22);
-      doc.text('Page '+pageNum+' of '+pageTotal, W-M, H-22, {align:'right'});
+      doc.text('F. · AI-powered reconciliation', M, H-18);
+      doc.text('Page '+pageNum+' of '+pageTotal, W-M, H-18, {align:'right'});
     };
     const sevColor = (sev) => {
-      return {Low:[5,150,105], Medium:[217,119,6], High:[224,25,58], Critical:[224,25,58]}[sev] || [136,136,136];
+      return {Low:[16,185,129], Medium:[217,119,6], High:[224,25,58], Critical:[224,25,58]}[sev] || [136,136,136];
     };
 
     // ============ COVER PAGE ============
-    // Big black band at top
-    doc.setFillColor(10,10,10);
+    // Dark band at top
+    doc.setFillColor(10,31,21);
     doc.rect(0, 0, W, 260, 'F');
 
-    // R. logo
+    // F. logo
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold'); doc.setFontSize(56);
-    doc.text('R.', M, 110);
+    doc.text('F.', M, 110);
 
     // Tagline
     doc.setFont('helvetica','normal'); doc.setFontSize(11);
@@ -1074,7 +1128,7 @@ function exportPDF(){
       {label:'TRANSACTIONS', value:String(summary.total_transactions), sub:'Analyzed', color:[10,10,10]},
       {label:'BREAKS FOUND', value:String(summary.breaks_found), sub:'Require action', color:[224,25,58]},
       {label:'UNRECONCILED', value:summary.unreconciled_amount, sub:'MXN', color:[217,119,6]},
-      {label:'TIME SAVED', value:summary.time_saved, sub:'vs manual review', color:[5,150,105]},
+      {label:'TIME SAVED', value:summary.time_saved, sub:'vs manual review', color:[16,185,129]},
     ];
     cards.forEach((c,i) => {
       const x = M + i * (cardW + 8);
@@ -1146,7 +1200,7 @@ function exportPDF(){
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
       steps.forEach((step, i) => {
         // Number circle
-        doc.setFillColor(10,10,10);
+        doc.setFillColor(10,31,21);
         doc.circle(M+7, y-3, 9, 'F');
         doc.setFont('helvetica','bold'); doc.setFontSize(8);
         doc.setTextColor(255,255,255);
@@ -1190,7 +1244,7 @@ function exportPDF(){
       body: tableBody,
       margin: {left: M, right: M},
       styles: {font:'helvetica', fontSize: 9, cellPadding: 7, lineColor: [229,229,229], lineWidth: 0.5},
-      headStyles: {fillColor: [10,10,10], textColor: [255,255,255], fontStyle: 'bold', fontSize: 8, cellPadding: 8},
+      headStyles: {fillColor: [10,31,21], textColor: [255,255,255], fontStyle: 'bold', fontSize: 8, cellPadding: 8},
       alternateRowStyles: {fillColor: [250,250,250]},
       columnStyles: {
         0: {cellWidth: 90, font: 'courier', fontSize: 8.5},
@@ -1287,7 +1341,7 @@ function exportPDF(){
         a.steps.forEach((s, i) => {
           if(cy > H - 80){ doc.addPage(); addHeader(); cy = 68; }
           // Step number circle
-          doc.setFillColor(10,10,10);
+          doc.setFillColor(10,31,21);
           doc.circle(M+6, cy-3, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(7);
           doc.setTextColor(255,255,255);
@@ -1326,7 +1380,7 @@ function exportPDF(){
 // ── ONBOARDING TOUR ──
 const TOUR_STEPS = [
   {sel:'.upload-area', title:'1. Upload transactions',
-   msg:'Drop any CSV here to run the reconciliation. R. AI will detect breaks and explain each one.'},
+   msg:'Drop any CSV here to run the reconciliation. F. AI will detect breaks and explain each one.'},
   {sel:'#sample-card', title:'2. Try it with sample data',
    msg:'No CSV handy? Download the sample dataset (500 transactions · 9 seeded breaks) and upload it here to see the full flow.'},
   {sel:'#breaks-tbody, .breaks-table', title:'3. Detected breaks',
@@ -1370,7 +1424,7 @@ function runTourStep(idx){
   const isBottom = r.top < window.innerHeight / 2;
   const tipTop = isBottom ? r.bottom + 16 : r.top - 16;
   const tipTransform = isBottom ? '' : 'translateY(-100%)';
-  tip.style.cssText = `position:fixed;top:${tipTop}px;left:${Math.min(Math.max(r.left, 20), window.innerWidth - 340)}px;transform:${tipTransform};background:#0a0a0a;color:#fff;padding:16px 18px;border-radius:12px;max-width:320px;z-index:152;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:tourPop 0.3s cubic-bezier(0.2,0.9,0.3,1.3)`;
+  tip.style.cssText = `position:fixed;top:${tipTop}px;left:${Math.min(Math.max(r.left, 20), window.innerWidth - 340)}px;transform:${tipTransform};background:var(--dark);color:#fff;padding:16px 18px;border-radius:12px;max-width:320px;z-index:152;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:tourPop 0.3s cubic-bezier(0.2,0.9,0.3,1.3)`;
   tip.innerHTML = `
     <div style="font-size:11px;color:#888;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Step ${idx+1} of ${TOUR_STEPS.length}</div>
     <div style="font-size:15px;font-weight:600;margin-bottom:6px">${step.title}</div>
@@ -1381,7 +1435,7 @@ function runTourStep(idx){
       </div>
       <div style="display:flex;gap:6px">
         <button class="action-btn" style="background:transparent;color:#888;border-color:#444;font-size:11px" onclick="skipTour()">Skip</button>
-        <button class="action-btn" style="background:#fff;color:#000;border-color:#fff;font-size:11px" onclick="runTourStep(${idx+1})">${idx===TOUR_STEPS.length-1?'Got it':'Next →'}</button>
+        <button class="action-btn" style="background:#fff;color:var(--dark);border-color:#fff;font-size:11px" onclick="runTourStep(${idx+1})">${idx===TOUR_STEPS.length-1?'Got it':'Next →'}</button>
       </div>
     </div>
   `;
@@ -1424,8 +1478,10 @@ async function loadRules() {
         <div><span class="sev-badge ${r.severity}">${r.severity}</span></div>
         <div><span class="rule-active ${r.is_active?'on':'off'}">${r.is_active?'Active':'Off'}</span></div>
         <div style="display:flex;gap:4px">
-          <button class="action-btn" style="font-size:11px;padding:4px 8px" onclick="editRule(${r.id})">Edit</button>
-          <button class="action-btn" style="font-size:11px;padding:4px 8px;color:var(--red)" onclick="deleteRule(${r.id})">Del</button>
+          ${canWrite() ? `
+            <button class="action-btn" style="font-size:11px;padding:4px 8px" onclick="editRule(${r.id})">Edit</button>
+            <button class="action-btn" style="font-size:11px;padding:4px 8px;color:var(--red)" onclick="deleteRule(${r.id})">Del</button>
+          ` : '<span style="font-size:11px;color:var(--muted2)">view only</span>'}
         </div>
       </div>`).join('');
   } catch (e) {

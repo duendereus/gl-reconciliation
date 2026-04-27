@@ -93,6 +93,7 @@ class User(Base):
     password = Column(String(120), nullable=False)  # plaintext — demo only
     display_name = Column(String(120), default="")
     role = Column(String(60), default="")
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict:
@@ -101,6 +102,7 @@ class User(Base):
             "username": self.username,
             "display_name": self.display_name,
             "role": self.role,
+            "is_admin": bool(self.is_admin),
         }
 
 

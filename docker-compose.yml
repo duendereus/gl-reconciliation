@@ -8,6 +8,7 @@ services:
     environment:
       - PORT=8000
       - ENV=development
+      - READ_ONLY=${READ_ONLY:-false}
     volumes:
       - app-data:/app/data
     restart: unless-stopped

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -12,6 +13,30 @@ from backend.database import get_db
 from backend.models import LoginEvent, Session, User
 
 router = APIRouter()
+
+
+def is_read_only_mode() -> bool:
+    """Whether the deployment is in read-only mode (set via READ_ONLY env var)."""
+    return os.getenv("READ_ONLY", "false").lower() in ("1", "true", "yes")
+
+
+def require_write_access(
+    authorization: str | None = Header(None),
+    db: DBSession = Depends(get_db),
+):
+    """FastAPI dependency: allow only admin users when READ_ONLY is set."""
+    if not is_read_only_mode():
+        return  # writes open to all
+    # Read-only is on — only admins pass
+    if not authorization:
+        raise HTTPException(status_code=403, detail="Read-only demo · sign in as admin to make changes.")
+    token = authorization.replace("Bearer ", "")
+    session = db.query(Session).filter(Session.token == token).first()
+    if not session:
+        raise HTTPException(status_code=403, detail="Read-only demo · sign in as admin to make changes.")
+    user = db.query(User).filter(User.id == session.user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Read-only demo · this action requires admin access.")
 
 
 class LoginRequest(BaseModel):
@@ -80,6 +105,12 @@ def logout(
             db.delete(session)
             db.commit()
     return {"status": "ok"}
+
+
+@router.get("/config")
+def get_config():
+    """Public config the frontend reads at boot (no auth)."""
+    return {"read_only": is_read_only_mode()}
 
 
 @router.get("/login-events")
