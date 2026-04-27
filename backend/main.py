@@ -72,19 +72,23 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         for acc in accounts:
-            user = db.query(User).filter(User.username == acc["username"]).first()
-            if not user:
-                db.add(User(**acc))
-                logger.info("Seeded user: %s (admin=%s)", acc["username"], acc["is_admin"])
-            else:
-                changed = False
-                for k, v in acc.items():
-                    if getattr(user, k) != v:
-                        setattr(user, k, v)
-                        changed = True
-                if changed:
-                    logger.info("Updated user: %s", acc["username"])
-        db.commit()
+            try:
+                user = db.query(User).filter(User.username == acc["username"]).first()
+                if not user:
+                    db.add(User(**acc))
+                    logger.info("Seeded user: %s (admin=%s)", acc["username"], acc["is_admin"])
+                else:
+                    changed = False
+                    for k, v in acc.items():
+                        if getattr(user, k, None) != v:
+                            setattr(user, k, v)
+                            changed = True
+                    if changed:
+                        logger.info("Updated user: %s", acc["username"])
+                db.commit()
+            except Exception as exc:
+                logger.warning("Could not seed user %s: %s", acc["username"], exc)
+                db.rollback()
     finally:
         db.close()
 
