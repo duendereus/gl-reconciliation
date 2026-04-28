@@ -667,6 +667,9 @@ function updateDashboard(label){
   renderBreaks(); renderTrace();
   chartsBuilt=false; Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}}); chartInstances={};
   const at=document.querySelector('.tab-panel.active'); if(at&&at.id==='tab-explorer') setTimeout(()=>buildCharts(),50);
+  // Enable Export PDF button if there's data (works for both upload + saved dataset load)
+  const pdfBtn = document.getElementById('export-pdf-btn');
+  if(pdfBtn) pdfBtn.disabled = breaks.length === 0;
 }
 
 // ── API ──
@@ -707,8 +710,6 @@ function applyResponse(data,label){
   if(data.dataset_id) currentDatasetId = data.dataset_id;
   updateDashboard(label);
   refreshDatasetDropdown();
-  // Enable Export PDF if there's data
-  document.getElementById('export-pdf-btn').disabled = breaks.length === 0;
 }
 
 function showLoading(msg){
