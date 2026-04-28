@@ -1242,9 +1242,19 @@ function _generatePDF(){
     // Recommended next steps — derived from actual breaks
     const steps = buildNextSteps(breaks);
     if(steps.length){
-      doc.setDrawColor(229,229,229); doc.setLineWidth(0.5);
-      doc.line(M, y, W-M, y);
-      y += 20;
+      const SAFE_BOTTOM = H - 60; // keep clear of footer
+      // Estimate height: header (38) + ~32pt per step (avg 1-2 lines)
+      const estimatedHeight = 38 + steps.length * 32;
+      // If next-steps won't fit on cover, push it to its own page with header
+      if(y + estimatedHeight > SAFE_BOTTOM){
+        doc.addPage();
+        addHeader();
+        y = 68;
+      } else {
+        doc.setDrawColor(229,229,229); doc.setLineWidth(0.5);
+        doc.line(M, y, W-M, y);
+        y += 20;
+      }
 
       doc.setTextColor(136,136,136);
       doc.setFont('helvetica','bold'); doc.setFontSize(9);
@@ -1253,6 +1263,14 @@ function _generatePDF(){
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
       steps.forEach((step, i) => {
+        // Defensive page-break per step in case content still overflows
+        const lines = doc.splitTextToSize(step, W - M*2 - 24);
+        const stepHeight = lines.length * 15 + 8;
+        if(y + stepHeight > SAFE_BOTTOM){
+          doc.addPage();
+          addHeader();
+          y = 68;
+        }
         // Number circle
         doc.setFillColor(10,31,21);
         doc.circle(M+7, y-3, 9, 'F');
@@ -1262,9 +1280,8 @@ function _generatePDF(){
         // Step text
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
         doc.setTextColor(10,10,10);
-        const lines = doc.splitTextToSize(step, W - M*2 - 24);
         doc.text(lines, M+24, y);
-        y += lines.length * 15 + 8;
+        y += stepHeight;
       });
     }
 
