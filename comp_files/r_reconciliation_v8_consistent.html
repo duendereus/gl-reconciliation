@@ -483,6 +483,7 @@ button.tab-btn.active{background:var(--dark)!important;border-color:var(--dark)!
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // ── CONFIG ──
+console.log('[F.] Boot · jspdf =', typeof window.jspdf, '· Chart =', typeof window.Chart);
 const API_BASE = window.location.origin;
 let authToken = localStorage.getItem('auth_token') || '';
 let appConfig = {read_only: false};
@@ -1051,11 +1052,29 @@ function buildNextSteps(brks){
 }
 
 function exportPDF(){
-  if(!breaks.length){ showToast('Nothing to export','Upload a dataset first','info'); return; }
-  if(!window.jspdf){
-    showToast('PDF library not loaded', 'Please refresh the page and try again.', 'error');
+  console.log('[PDF] exportPDF called');
+  console.log('[PDF] breaks.length =', breaks.length);
+  console.log('[PDF] analyses.length =', analyses.length);
+  console.log('[PDF] window.jspdf =', typeof window.jspdf, window.jspdf);
+  console.log('[PDF] currentDatasetLabel =', currentDatasetLabel);
+  console.log('[PDF] summary =', summary);
+
+  if(!breaks.length){
+    console.warn('[PDF] No breaks to export');
+    showToast('Nothing to export','Upload a dataset first','info');
     return;
   }
+  if(!window.jspdf){
+    console.error('[PDF] jsPDF library not loaded — check CDN');
+    showToast('PDF library not loaded', 'Refresh the page and try again. If it persists, check browser console.', 'error', 8000);
+    return;
+  }
+  if(!window.jspdf.jsPDF){
+    console.error('[PDF] window.jspdf.jsPDF missing', Object.keys(window.jspdf));
+    showToast('PDF library incomplete', 'jsPDF object missing.', 'error', 8000);
+    return;
+  }
+
   const btn = document.getElementById('export-pdf-btn');
   const originalText = btn.textContent;
   btn.disabled = true;
@@ -1064,8 +1083,15 @@ function exportPDF(){
 
   // Yield to browser so the loading state renders before jsPDF blocks the thread
   setTimeout(() => {
-    try { _generatePDF(); }
-    finally {
+    console.log('[PDF] starting _generatePDF()');
+    const t0 = performance.now();
+    try {
+      _generatePDF();
+      console.log('[PDF] _generatePDF completed in', Math.round(performance.now() - t0), 'ms');
+    } catch(e) {
+      console.error('[PDF] _generatePDF threw:', e);
+      showToast('Export failed', e.message || 'Unknown error — check console.', 'error', 8000);
+    } finally {
       btn.disabled = false;
       btn.textContent = originalText;
     }
@@ -1074,7 +1100,12 @@ function exportPDF(){
 
 function _generatePDF(){
   try {
+    console.log('[PDF] step 1: instantiating jsPDF');
     const { jsPDF } = window.jspdf;
+    if(!jsPDF) throw new Error('jsPDF constructor not found');
+    if(typeof jsPDF.API.autoTable !== 'function'){
+      console.warn('[PDF] autoTable plugin missing — table rendering will fail. Plugin loaded?', typeof jsPDF.API.autoTable);
+    }
     const doc = new jsPDF({unit:'pt', format:'a4'});
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
@@ -1110,6 +1141,7 @@ function _generatePDF(){
       return {Low:[16,185,129], Medium:[217,119,6], High:[224,25,58], Critical:[224,25,58]}[sev] || [136,136,136];
     };
 
+    console.log('[PDF] step 2: building cover page');
     // ============ COVER PAGE ============
     // Dark band at top
     doc.setFillColor(10,31,21);
@@ -1235,6 +1267,7 @@ function _generatePDF(){
       });
     }
 
+    console.log('[PDF] step 3: building breaks table');
     // ============ BREAKS TABLE ============
     doc.addPage();
     addHeader();
@@ -1282,6 +1315,7 @@ function _generatePDF(){
       didDrawPage: (data) => { addHeader(); },
     });
 
+    console.log('[PDF] step 4: building AI analysis pages for', breaks.length, 'breaks');
     // ============ AI ANALYSIS — one per break ============
     breaks.forEach((b, idx) => {
       const a = analyses.find(x => x.txn_id === b.txn_id) || {};
@@ -1381,6 +1415,7 @@ function _generatePDF(){
       }
     });
 
+    console.log('[PDF] step 5: adding footers to all pages');
     // ============ FOOTERS on all pages ============
     const totalPages = doc.internal.getNumberOfPages();
     for(let p=1; p<=totalPages; p++){
@@ -1390,11 +1425,16 @@ function _generatePDF(){
 
     // Save
     const safeLabel = (currentDatasetLabel || 'report').replace(/[^a-z0-9]/gi,'_').toLowerCase();
-    doc.save(`f-reconciliation-${safeLabel}-${today.replace(/[, ]/g,'-')}.pdf`);
+    const filename = `f-reconciliation-${safeLabel}-${today.replace(/[, ]/g,'-')}.pdf`;
+    const pageCount = doc.internal.getNumberOfPages();
+    console.log('[PDF] step 6: saving', filename, '— total pages:', pageCount);
+    doc.save(filename);
+    console.log('[PDF] step 7: doc.save() returned, browser should trigger download now');
     showToast('Report exported', 'PDF downloaded to your device', 'success');
   } catch(e) {
-    console.error(e);
-    showToast('Export failed', e.message, 'error');
+    console.error('[PDF] _generatePDF caught error:', e);
+    console.error('[PDF] error stack:', e && e.stack);
+    showToast('Export failed', (e && e.message) || 'Unknown error — open console for details.', 'error', 8000);
   }
 }
 
