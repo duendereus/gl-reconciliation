@@ -1052,6 +1052,27 @@ function buildNextSteps(brks){
 
 function exportPDF(){
   if(!breaks.length){ showToast('Nothing to export','Upload a dataset first','info'); return; }
+  if(!window.jspdf){
+    showToast('PDF library not loaded', 'Please refresh the page and try again.', 'error');
+    return;
+  }
+  const btn = document.getElementById('export-pdf-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  showToast('Generating report', 'This may take a few seconds...', 'info', 3000);
+
+  // Yield to browser so the loading state renders before jsPDF blocks the thread
+  setTimeout(() => {
+    try { _generatePDF(); }
+    finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }, 50);
+}
+
+function _generatePDF(){
   try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'pt', format:'a4'});
@@ -1369,7 +1390,7 @@ function exportPDF(){
 
     // Save
     const safeLabel = (currentDatasetLabel || 'report').replace(/[^a-z0-9]/gi,'_').toLowerCase();
-    doc.save(`r-reconciliation-${safeLabel}-${today.replace(/[, ]/g,'-')}.pdf`);
+    doc.save(`f-reconciliation-${safeLabel}-${today.replace(/[, ]/g,'-')}.pdf`);
     showToast('Report exported', 'PDF downloaded to your device', 'success');
   } catch(e) {
     console.error(e);
