@@ -1,177 +1,183 @@
-# R. — AI-Powered GL Reconciliation
+# F. — AI-Powered GL Reconciliation
 
 > Detect transaction breaks in seconds. Understand why. Know what to do next.
 
-Built to demonstrate how AI can automate Finance Operations reconciliation workflows in fintech — replacing hours of manual GL review with real-time, auditable AI analysis.
+A case study in productizing LLMs for fintech finance operations. Upload a CSV of transactions and the app detects breaks (FX rate mismatches, missing counterparties, duplicates, AML flags), explains the root cause of each in plain English, and recommends a specific action — backed by a configurable rule engine and a DB-cached AI layer so re-analyses are instant and cheap.
+
+**Live demo:** `https://gl-reconciliation-production.up.railway.app` · login `demo` / `demo2026` (read-only)
 
 ---
 
 ## What it does
 
-R. analyzes transaction datasets and automatically detects:
+For each break detected, the AI returns:
 
-- **FX Rate discrepancies** — applied rate vs BANXICO official closing
-- **Missing counterparties** — SWIFT transfers with no bank confirmation after 48h
-- **Duplicate transactions** — same entity, amount, and timestamp
-- **Interest calculation mismatches** — yield variance across savings accounts
-- **AML flags, unauthorized reversals, fee mismatches, SPEI duplicates** (Dataset 2)
+- **Root cause** — plain English, COO-readable
+- **Recommended action** — specific, operational
+- **Confidence score** (0-100%)
+- **Priority** (Low / Medium / High / Critical)
+- **Step-by-step traceability** — fully auditable reasoning chain
 
-For each break, the AI provides a plain-English root cause, a specific recommended action, a confidence score, and a full step-by-step reasoning trace.
+Built-in detectors:
+
+| Type | Rule |
+|---|---|
+| FX Rate | Applied rate vs reference rate (delta > 0.01) |
+| Missing Counterparty | DISPATCHED transactions > 48h without bank confirmation |
+| Duplicate | Same counterparty + amount + timestamp |
+| Interest Mismatch | Savings accounts where credited MXN deviates from expected yield |
+| AML Flag | Velocity-based heuristic for unregistered beneficiaries |
+| Unauthorized Reversal | Negative amounts with no matching original |
+| Settlement Timeout | Dispatched past the 15:00h cutoff |
+| SPEI Duplicate | Network retry pattern in SPEI transactions |
+| Fee Mismatch | Applied fee diverges from contracted rate |
+
+On top of these, finance teams can add their own rules (CRUD UI in the Rules tab) without touching code.
 
 ---
 
-## Demo
+## Engineering highlights
 
-The interactive demo is in `comp_files/widget.html`. Open it directly in any browser — no build step required.
+The AI is maybe 20% of the work. The rest is what makes it feel like a product:
 
-**Login credentials (pre-filled):**
+- **DB-backed analysis cache** — every break analysis is hashed and stored; re-analyzing the same break is instant and free (skips the Claude API entirely).
+- **Configurable rule engine** — declarative rules stored in DB, evaluated against any transaction CSV. Operators: `gt`, `lt`, `eq`, `neq`, `delta_gt`, `contains`, `not_contains`. Optional type/status filters.
+- **CSV validation with COO-readable errors** — "Missing required columns: rate_applied, timestamp" instead of a 500 stacktrace.
+- **Concurrent Claude calls** — bounded semaphore (3 parallel) + exponential backoff on 429s.
+- **Real auth + read-only mode** — token-based sessions persisted across hard refresh, audit log of every login (IP + user agent), `READ_ONLY=true` env flag for public deployments that lets only admins make changes.
+- **Lightweight schema migrations** — auto-detects missing columns on startup and `ALTER TABLE`s them in (works on SQLite + Postgres).
+- **Branded PDF export** — multi-page report with executive summary, per-break analysis, and dynamically-derived next steps. Built client-side with jsPDF.
+- **First-time onboarding tour** — sequenced tooltips, dismissible, persisted via localStorage.
 
+---
+
+## Stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | Single-file vanilla HTML/CSS/JS · Chart.js · jsPDF |
+| Backend | FastAPI (Python 3.11) |
+| AI | Claude Sonnet 4 (configurable via `CLAUDE_MODEL`) |
+| Data | pandas |
+| DB | SQLite (local) / Neon Postgres (prod) — via SQLAlchemy |
+| Hosting | Railway |
+| Tests | pytest · 100+ tests |
+
+---
+
+## Run locally
+
+```bash
+git clone https://github.com/duendereus/gl-reconciliation
+cd gl-reconciliation
+cp .env.example .env
+# Edit .env and set ANTHROPIC_API_KEY
+docker compose up --build
 ```
-Username: demo
-Password: ••••••••••
+
+Open `http://localhost:8000` and login with `demo` / `demo2026`.
+
+To run without Docker:
+
+```bash
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
-**What to explore:**
+To run the test suite:
 
-1. **Breaks tab** — click any row to see the AI analysis panel
-2. **Traceability tab** — expand each accordion to see how the model reached its decision
-3. **Data Explorer tab** — scatter plot shows break outliers vs normal transactions visually
-4. **Dataset selector** — switch between Dataset 1 (200 tx, 4 breaks) and Dataset 2 (500 tx, 9 breaks)
+```bash
+pytest backend/tests/ -v
+```
 
 ---
 
 ## Project structure
 
 ```
-r-reconciliation/
-├── comp_files/
-│   └── widget.html        ← Self-contained interactive demo
+gl-reconciliation/
 ├── backend/
-│   ├── main.py            ← FastAPI entry point
+│   ├── main.py                    ← FastAPI entry, lifespan, user/rules seeding
+│   ├── database.py                ← SQLAlchemy + auto column migrations
+│   ├── models.py                  ← User, Session, BusinessRule, SavedDataset, AnalysisCache
 │   ├── routes/
-│   │   ├── analyze.py     ← POST /analyze
-│   │   └── datasets.py    ← GET /datasets
+│   │   ├── auth.py                ← /auth/login, /me, /logout, /config + read-only middleware
+│   │   ├── analyze.py             ← POST /analyze (CSV upload + persistence)
+│   │   ├── datasets.py            ← GET /datasets, /datasets/{id}
+│   │   ├── rules.py               ← Rule CRUD + seed/reset
+│   │   └── admin.py               ← /admin/stats, /cache, /datasets (DB inspection)
 │   ├── services/
-│   │   ├── reconciliation.py
-│   │   └── claude_client.py
-│   └── data/
-│       ├── dataset_1.csv  ← 200 synthetic transactions
-│       └── dataset_2.csv  ← 500 synthetic transactions
-├── requirements.txt
-├── .env.example
+│   │   ├── reconciliation.py      ← Built-in break detectors
+│   │   ├── rule_engine.py         ← Dynamic rule evaluator
+│   │   ├── claude_client.py       ← AsyncAnthropic + cache + concurrency control
+│   │   └── csv_validator.py       ← Schema validation with user-friendly errors
+│   └── tests/                     ← 100+ pytest tests
+├── comp_files/
+│   ├── r_reconciliation_v8_consistent.html  ← Self-contained UI
+│   ├── dataset_1.csv              ← 200 synthetic transactions
+│   └── dataset_2.csv              ← 500 synthetic transactions
 ├── Dockerfile
-├── CLAUDE.md              ← Full architecture notes for AI agents
-└── README.md              ← This file
+├── docker-compose.yml
+├── railway.toml
+├── requirements.txt
+└── .env.example
 ```
 
 ---
 
-## Stack
+## API
 
-- **Frontend** — Vanilla HTML/CSS/JS (self-contained, zero build step)
-- **Backend** — FastAPI + Python
-- **AI** — Claude API (`claude-sonnet-4-20250514`) via Anthropic
-- **Data** — pandas for CSV processing and break detection
-- **Deploy** — Railway or Render (free tier)
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/` | GET | Serves the frontend |
+| `/health` | GET | Healthcheck (Railway) |
+| `/auth/config` | GET | Public flags (e.g. `read_only`) |
+| `/auth/login` | POST | Token-based session |
+| `/auth/me` | GET | Validate token |
+| `/auth/logout` | POST | Invalidate session |
+| `/auth/login-events` | GET | Audit log |
+| `/datasets` | GET | List saved analyses |
+| `/datasets/{id}` | GET | Load a saved analysis |
+| `/analyze` | POST | Upload CSV → detect breaks → AI analysis (admin-only when read-only) |
+| `/rules` | GET/POST | List + create rules |
+| `/rules/{id}` | GET/PUT/DELETE | Rule CRUD |
+| `/rules/seed` | POST | Seed default rules |
+| `/rules/reset` | POST | Wipe and re-seed |
+| `/admin/stats` | GET | DB stats + cache efficiency metrics |
+| `/admin/cache` | GET | Inspect cached analyses |
 
 ---
 
-## Setup
+## Configuration
 
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/duendereus/r-reconciliation
-cd r-reconciliation
-```
-
-### 2. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
+All env vars (see `.env.example`):
 
 ```env
-ANTHROPIC_API_KEY=your_anthropic_key_here
-PORT=8000
-ENV=development
-```
-
-### 4. Run the backend
-
-```bash
-uvicorn backend.main:app --reload --port 8000
-```
-
-### 5. Open the demo
-
-Open `comp_files/widget.html` in your browser, or serve it statically:
-
-```bash
-python -m http.server 3000
-# then open http://localhost:3000/comp_files/widget.html
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgresql://...   # optional, falls back to SQLite
+CLAUDE_MODEL=claude-sonnet-4-20250514
+READ_ONLY=true                  # blocks writes for non-admin users
+DEMO_USERNAME=demo
+DEMO_PASSWORD=demo2026
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=changeme         # CHANGE THIS in production
 ```
 
 ---
 
-## API endpoints
+## What's not in this repo
 
-```
-POST /analyze
-  Body: { file: CSV }
-  Returns: { breaks: [...], summary: {...} }
-
-GET /datasets
-  Returns: list of available pre-loaded datasets
-```
+- Real transaction data (everything is synthetic)
+- BANXICO API integration (FX reference rate is hardcoded)
+- SWIFT gpi integration (recommendations are AI-generated, not executed)
+- CNBV regulatory filing (outputs are advisory only)
 
 ---
 
-## Synthetic datasets
+## License
 
-Both datasets contain realistic fintech transaction structures:
-
-| Field          | Description                                                             |
-| -------------- | ----------------------------------------------------------------------- |
-| `txn_id`       | Unique transaction identifier                                           |
-| `type`         | FX_TRANSFER, SWIFT_INTERNATIONAL, CORPORATE_CARD, SAVINGS_ACCOUNT, SPEI |
-| `amount_usd`   | Transaction amount in USD                                               |
-| `amount_mxn`   | Equivalent in MXN                                                       |
-| `rate_applied` | FX rate used at processing time                                         |
-| `timestamp`    | ISO 8601 datetime                                                       |
-| `status`       | COMPLETED, DISPATCHED, PENDING                                          |
-| `counterparty` | Destination bank or entity                                              |
-| `client_tier`  | RETAIL, CORPORATE_T1, CORPORATE_T2                                      |
-
-Breaks are seeded at specific rows to guarantee consistent demo output.
+MIT
 
 ---
 
-## Deploy to Railway
-
-```bash
-railway login
-railway init
-railway up
-```
-
-Set `ANTHROPIC_API_KEY` in Railway environment variables. The app will be live at a public URL in under 2 minutes.
-
----
-
-## Related projects
-
-- [business-rag](https://github.com/duendereus/business-rag) — RAG microservice for unstructured business documents
-- [data-rag](https://github.com/duendereus/data-rag) — Text-to-SQL microservice for natural language data queries
-
----
-
-Built by [@duendereus](https://github.com/duendereus)
+Built by [Fernando Céspedes](https://www.linkedin.com/in/fernandocespedesm/) · A portfolio project on productizing LLMs for finance ops · All data shown is synthetic.
