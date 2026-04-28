@@ -1191,8 +1191,16 @@ function _generatePDF(){
       doc.setFont('helvetica','bold'); doc.setFontSize(8);
       doc.setTextColor(136,136,136);
       doc.text(c.label, x+10, y+16);
-      doc.setFont('helvetica','bold'); doc.setFontSize(18);
+      // Adaptive font size for the value — shrink until it fits inside the card
+      doc.setFont('helvetica','bold');
       doc.setTextColor(...c.color);
+      const maxWidth = cardW - 20; // 10pt padding each side
+      let fontSize = 18;
+      doc.setFontSize(fontSize);
+      while(doc.getTextWidth(c.value) > maxWidth && fontSize > 9){
+        fontSize -= 1;
+        doc.setFontSize(fontSize);
+      }
       doc.text(c.value, x+10, y+44);
       doc.setFont('helvetica','normal'); doc.setFontSize(8);
       doc.setTextColor(170,170,170);
