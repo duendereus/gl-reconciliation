@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import AnalysisCache, BusinessRule, LoginEvent, SavedDataset, User
+from backend.models import AnalysisCache, BusinessRule, LoginEvent, PageView, SavedDataset, User
 
 router = APIRouter()
 
@@ -58,6 +58,55 @@ def list_cache(db: Session = Depends(get_db)):
                 "size_bytes": len(e.analysis_json),
             }
             for e in entries
+        ],
+    }
+
+
+@router.get("/traffic")
+def traffic_stats(db: Session = Depends(get_db)):
+    """Anonymous traffic + login activity (admin-only in routes/auth)."""
+    from sqlalchemy import func, distinct
+    from datetime import datetime, timezone, timedelta
+
+    total_views = db.query(PageView).count()
+    unique_view_ips = db.query(func.count(distinct(PageView.ip_address))).scalar() or 0
+
+    last_24h_cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    views_24h = db.query(PageView).filter(PageView.created_at >= last_24h_cutoff).count()
+    unique_ips_24h = (
+        db.query(func.count(distinct(PageView.ip_address)))
+        .filter(PageView.created_at >= last_24h_cutoff)
+        .scalar() or 0
+    )
+
+    successful_logins = db.query(LoginEvent).filter(LoginEvent.success == True).count()
+    unique_login_ips = (
+        db.query(func.count(distinct(LoginEvent.ip_address)))
+        .filter(LoginEvent.success == True)
+        .scalar() or 0
+    )
+
+    # Recent views (top 30)
+    recent = db.query(PageView).order_by(PageView.created_at.desc()).limit(30).all()
+    return {
+        "page_views": {
+            "total": total_views,
+            "unique_ips_total": unique_view_ips,
+            "last_24h": views_24h,
+            "unique_ips_last_24h": unique_ips_24h,
+        },
+        "login_activity": {
+            "successful_logins_total": successful_logins,
+            "unique_ips_logged_in": unique_login_ips,
+        },
+        "recent_views": [
+            {
+                "ip": v.ip_address,
+                "ua": (v.user_agent or "")[:100],
+                "referer": v.referer,
+                "at": v.created_at.isoformat() if v.created_at else None,
+            }
+            for v in recent
         ],
     }
 

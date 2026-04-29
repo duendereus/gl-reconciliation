@@ -132,6 +132,18 @@ class LoginEvent(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class PageView(Base):
+    """Anonymous page-load tracking (deduplicated by IP per day)."""
+
+    __tablename__ = "page_views"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String(45), default="", index=True)
+    user_agent = Column(String(300), default="")
+    referer = Column(String(300), default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class SavedDataset(Base):
     """A dataset upload with persisted analysis results."""
 

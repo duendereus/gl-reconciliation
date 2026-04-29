@@ -4,7 +4,7 @@ import sys
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -127,8 +127,23 @@ if os.path.isdir(comp_dir):
 
 
 @app.get("/")
-async def root():
-    """Serve the frontend directly at root."""
+async def root(request: Request):
+    """Serve the frontend directly at root + log a page view."""
+    try:
+        from backend.database import SessionLocal
+        from backend.models import PageView
+        db = SessionLocal()
+        try:
+            db.add(PageView(
+                ip_address=request.client.host if request.client else "",
+                user_agent=request.headers.get("user-agent", "")[:300],
+                referer=request.headers.get("referer", "")[:300],
+            ))
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning("Page view logging failed: %s", exc)
     html = os.path.join(os.path.dirname(__file__), "..", "comp_files", "r_reconciliation_v8_consistent.html")
     return FileResponse(html, media_type="text/html")
 

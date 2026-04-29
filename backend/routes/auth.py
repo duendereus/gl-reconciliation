@@ -113,18 +113,54 @@ def get_config():
     return {"read_only": is_read_only_mode()}
 
 
+def require_admin(
+    authorization: str | None = Header(None),
+    db: DBSession = Depends(get_db),
+) -> User:
+    """FastAPI dependency: only admin users may pass."""
+    if not authorization:
+        raise HTTPException(status_code=403, detail="Admin only")
+    token = authorization.replace("Bearer ", "")
+    session = db.query(Session).filter(Session.token == token).first()
+    if not session:
+        raise HTTPException(status_code=403, detail="Admin only")
+    user = db.query(User).filter(User.id == session.user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    return user
+
+
 @router.get("/login-events")
-def list_login_events(db: DBSession = Depends(get_db)):
-    events = db.query(LoginEvent).order_by(LoginEvent.created_at.desc()).limit(50).all()
+def list_login_events(
+    db: DBSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    events = (
+        db.query(LoginEvent).order_by(LoginEvent.created_at.desc()).limit(200).all()
+    )
+    # Aggregates
+    successful = [e for e in events if e.success]
+    unique_ips = {e.ip_address for e in successful if e.ip_address}
+    unique_users = {e.username for e in successful}
     return {
+        "stats": {
+            "total_attempts": len(events),
+            "successful_logins": len(successful),
+            "failed_attempts": len(events) - len(successful),
+            "unique_ips": len(unique_ips),
+            "unique_users_logged_in": len(unique_users),
+            "ips": sorted(unique_ips),
+            "users": sorted(unique_users),
+        },
         "events": [
             {
                 "id": e.id,
                 "username": e.username,
                 "success": e.success,
                 "ip_address": e.ip_address,
+                "user_agent": (e.user_agent or "")[:120],
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
             for e in events
-        ]
+        ],
     }
