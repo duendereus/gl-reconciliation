@@ -71,24 +71,55 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     try:
+        configured_usernames = {acc["username"] for acc in accounts}
         for acc in accounts:
+            # Mask password in logs (first 2 chars + length)
+            pw_mask = f"{acc['password'][:2]}***({len(acc['password'])} chars)"
+            using_default = acc["password"] == "changeme" or acc["password"] == "demo2026"
+            warn = " ⚠ DEFAULT — INSECURE" if using_default and acc.get("is_admin") else ""
+            logger.info("User config: %s · admin=%s · password=%s%s",
+                        acc["username"], acc["is_admin"], pw_mask, warn)
             try:
                 user = db.query(User).filter(User.username == acc["username"]).first()
                 if not user:
                     db.add(User(**acc))
-                    logger.info("Seeded user: %s (admin=%s)", acc["username"], acc["is_admin"])
+                    logger.info("  → Seeded NEW user: %s", acc["username"])
                 else:
-                    changed = False
+                    changes = []
                     for k, v in acc.items():
                         if getattr(user, k, None) != v:
+                            if k == "password":
+                                changes.append("password (rotated)")
+                            else:
+                                changes.append(f"{k}")
                             setattr(user, k, v)
-                            changed = True
-                    if changed:
-                        logger.info("Updated user: %s", acc["username"])
+                    if changes:
+                        logger.info("  → Updated existing user %s: %s",
+                                    acc["username"], ", ".join(changes))
+                    else:
+                        logger.info("  → User %s already up-to-date", acc["username"])
                 db.commit()
             except Exception as exc:
                 logger.warning("Could not seed user %s: %s", acc["username"], exc)
                 db.rollback()
+
+        # Cleanup: remove any orphan admin users that aren't in the current config.
+        # Prevents leftover admin accounts (e.g. default 'admin/changeme') from
+        # surviving when ADMIN_USERNAME is rotated.
+        try:
+            orphan_admins = (
+                db.query(User)
+                .filter(User.is_admin == True, User.username.notin_(configured_usernames))
+                .all()
+            )
+            for u in orphan_admins:
+                logger.warning("Removing orphan admin user: %s (was seeded with old config)", u.username)
+                db.delete(u)
+            if orphan_admins:
+                db.commit()
+        except Exception as exc:
+            logger.warning("Orphan admin cleanup failed: %s", exc)
+            db.rollback()
     finally:
         db.close()
 
