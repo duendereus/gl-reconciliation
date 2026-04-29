@@ -1595,20 +1595,42 @@ function skipTour(){
 }
 
 // ── ADMIN DASHBOARD ──
+async function fetchJson(url){
+  console.log('[Admin] fetching', url, '· headers:', authHeaders());
+  const res = await fetch(url, {headers: authHeaders()});
+  console.log('[Admin] →', url, 'status:', res.status);
+  const body = await res.json().catch(() => null);
+  console.log('[Admin] →', url, 'body:', body);
+  if(!res.ok){
+    const detail = (body && body.detail) || `HTTP ${res.status}`;
+    throw new Error(`${url} → ${detail}`);
+  }
+  return body;
+}
+
 async function loadAdmin(){
+  console.log('[Admin] loadAdmin called · currentUser:', currentUser, '· authToken length:', authToken.length);
   if(!currentUser || !currentUser.is_admin){
-    showToast('Admin only', 'You need admin access to view this tab.', 'error');
+    showToast('Admin only', `currentUser.is_admin = ${currentUser && currentUser.is_admin}`, 'error');
     return;
   }
   const btn = document.getElementById('admin-refresh-btn');
   if(btn){ btn.disabled = true; btn.textContent = 'Loading...'; }
 
+  let stats=null, traffic=null, events=null;
+  const errs = [];
+  try { stats = await fetchJson(API_BASE+'/admin/stats'); }
+  catch(e){ console.error(e); errs.push('stats: '+e.message); }
+  try { traffic = await fetchJson(API_BASE+'/admin/traffic'); }
+  catch(e){ console.error(e); errs.push('traffic: '+e.message); }
+  try { events = await fetchJson(API_BASE+'/auth/login-events'); }
+  catch(e){ console.error(e); errs.push('events: '+e.message); }
+
+  if(errs.length){
+    showToast('Some endpoints failed', errs.join(' · '), 'error', 8000);
+  }
+
   try {
-    const [stats, traffic, events] = await Promise.all([
-      fetch(API_BASE+'/admin/stats',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
-      fetch(API_BASE+'/admin/traffic',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
-      fetch(API_BASE+'/auth/login-events',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
-    ]);
 
     // ── Traffic ──
     if(traffic && traffic.page_views){
