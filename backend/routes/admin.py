@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import AnalysisCache, BusinessRule, LoginEvent, PageView, SavedDataset, User
+from backend.routes.auth import require_admin
 
 router = APIRouter()
 
 
 @router.get("/stats")
-def db_stats(db: Session = Depends(get_db)):
+def db_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """Summary counts + cache efficiency metrics."""
     from sqlalchemy import func
 
@@ -44,7 +45,7 @@ def db_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/cache")
-def list_cache(db: Session = Depends(get_db)):
+def list_cache(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """List all cached AI analyses (grouped by txn_id)."""
     entries = db.query(AnalysisCache).order_by(AnalysisCache.created_at.desc()).all()
     return {
@@ -63,7 +64,7 @@ def list_cache(db: Session = Depends(get_db)):
 
 
 @router.get("/traffic")
-def traffic_stats(db: Session = Depends(get_db)):
+def traffic_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """Anonymous traffic + login activity (admin-only in routes/auth)."""
     from sqlalchemy import func, distinct
     from datetime import datetime, timezone, timedelta
@@ -112,7 +113,7 @@ def traffic_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/datasets")
-def list_saved_datasets(db: Session = Depends(get_db)):
+def list_saved_datasets(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """Verbose list of saved datasets with sizes."""
     datasets = db.query(SavedDataset).order_by(SavedDataset.created_at.desc()).all()
     return {

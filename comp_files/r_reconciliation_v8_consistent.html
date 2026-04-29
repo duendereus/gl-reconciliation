@@ -322,6 +322,7 @@ button.tab-btn.active{background:var(--dark)!important;border-color:var(--dark)!
       <button class="tab-btn" onclick="switchTab('trace',this)">Traceability</button>
       <button class="tab-btn" onclick="switchTab('explorer',this)">Data Explorer</button>
       <button class="tab-btn" onclick="switchTab('rules',this)">Rules</button>
+      <button class="tab-btn" id="admin-tab-btn" onclick="switchTab('admin',this)" style="display:none">Admin</button>
     </div>
     <div class="dataset-selector">
       <span class="dataset-label">Dataset</span>
@@ -475,6 +476,56 @@ button.tab-btn.active{background:var(--dark)!important;border-color:var(--dark)!
         <div id="rules-tbody"><div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading rules...</div></div>
       </div>
     </div>
+
+    <!-- ADMIN -->
+    <div class="tab-panel" id="tab-admin">
+      <div style="margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em">Admin Dashboard</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px">Traffic, login activity, and system health</div>
+        </div>
+        <button class="action-btn" onclick="loadAdmin()" id="admin-refresh-btn" style="font-size:11px">↻ Refresh</button>
+      </div>
+
+      <!-- Top stats -->
+      <div class="section-header"><div class="section-title">Traffic (last 24h)</div></div>
+      <div class="summary-grid" style="margin-bottom:1.25rem">
+        <div class="stat-card"><div class="stat-label">Page Views</div><div class="stat-value" id="adm-views-24h">--</div><div class="stat-sub">last 24 hours</div></div>
+        <div class="stat-card"><div class="stat-label">Unique Visitors</div><div class="stat-value" id="adm-ips-24h">--</div><div class="stat-sub">distinct IPs · 24h</div></div>
+        <div class="stat-card"><div class="stat-label">Total Page Views</div><div class="stat-value" id="adm-views-total">--</div><div class="stat-sub">all-time</div></div>
+        <div class="stat-card"><div class="stat-label">Unique IPs</div><div class="stat-value" id="adm-ips-total">--</div><div class="stat-sub">all-time</div></div>
+      </div>
+
+      <div class="section-header"><div class="section-title">Engagement</div></div>
+      <div class="summary-grid" style="margin-bottom:1.25rem">
+        <div class="stat-card"><div class="stat-label">Successful Logins</div><div class="stat-value green" id="adm-logins-ok">--</div><div class="stat-sub">all-time</div></div>
+        <div class="stat-card"><div class="stat-label">Failed Attempts</div><div class="stat-value red" id="adm-logins-fail">--</div><div class="stat-sub">all-time</div></div>
+        <div class="stat-card"><div class="stat-label">Distinct Users</div><div class="stat-value" id="adm-users-distinct">--</div><div class="stat-sub">logged in</div></div>
+        <div class="stat-card"><div class="stat-label">Distinct IPs</div><div class="stat-value" id="adm-ips-loggedin">--</div><div class="stat-sub">logged in</div></div>
+      </div>
+
+      <div class="section-header"><div class="section-title">AI cost & cache</div></div>
+      <div class="summary-grid" style="margin-bottom:1.25rem">
+        <div class="stat-card"><div class="stat-label">Datasets Saved</div><div class="stat-value" id="adm-datasets">--</div><div class="stat-sub">analyses on disk</div></div>
+        <div class="stat-card"><div class="stat-label">Breaks Cached</div><div class="stat-value" id="adm-cache">--</div><div class="stat-sub">unique analyses</div></div>
+        <div class="stat-card"><div class="stat-label">Calls Avoided</div><div class="stat-value green" id="adm-avoided">--</div><div class="stat-sub">cache hits</div></div>
+        <div class="stat-card"><div class="stat-label">Cost Saved</div><div class="stat-value green" id="adm-cost">--</div><div class="stat-sub">USD (est)</div></div>
+      </div>
+
+      <!-- Recent logins -->
+      <div class="section-header"><div class="section-title">Recent login attempts</div><div class="section-count" id="adm-events-count">--</div></div>
+      <div class="breaks-table" style="margin-bottom:1.25rem">
+        <div class="table-head" style="grid-template-columns:1fr 0.7fr 0.6fr 2fr 1fr"><div>User</div><div>Status</div><div>IP</div><div>User Agent</div><div>When</div></div>
+        <div id="adm-events-tbody"><div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Open this tab to load admin data...</div></div>
+      </div>
+
+      <!-- Recent page views -->
+      <div class="section-header"><div class="section-title">Recent page views</div></div>
+      <div class="breaks-table">
+        <div class="table-head" style="grid-template-columns:0.6fr 2fr 1.5fr 1fr"><div>IP</div><div>User Agent</div><div>Referer</div><div>When</div></div>
+        <div id="adm-views-tbody"><div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">--</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -493,6 +544,9 @@ function applyReadOnlyMode(){
   // Show "Read-only" badge if applicable
   const badge = document.getElementById('readonly-badge');
   if(badge) badge.style.display = (appConfig.read_only && !canWrite()) ? 'inline-flex' : 'none';
+  // Show Admin tab only to admins
+  const adminTab = document.getElementById('admin-tab-btn');
+  if(adminTab) adminTab.style.display = (currentUser && currentUser.is_admin) ? '' : 'none';
 
   const writable = canWrite();
   // Upload area
@@ -650,6 +704,7 @@ function switchTab(id,btn){
   btn.classList.add('active');
   if(id==='explorer') setTimeout(()=>buildCharts(),50);
   if(id==='rules') loadRules();
+  if(id==='admin') loadAdmin();
 }
 
 // ── UPDATE DASHBOARD ──
@@ -1537,6 +1592,101 @@ function removeTourOverlay(){
 function skipTour(){
   removeTourOverlay();
   localStorage.setItem('tour_seen','1');
+}
+
+// ── ADMIN DASHBOARD ──
+async function loadAdmin(){
+  if(!currentUser || !currentUser.is_admin){
+    showToast('Admin only', 'You need admin access to view this tab.', 'error');
+    return;
+  }
+  const btn = document.getElementById('admin-refresh-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Loading...'; }
+
+  try {
+    const [stats, traffic, events] = await Promise.all([
+      fetch(API_BASE+'/admin/stats',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
+      fetch(API_BASE+'/admin/traffic',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
+      fetch(API_BASE+'/auth/login-events',{headers:authHeaders()}).then(r=>r.json()).catch(()=>null),
+    ]);
+
+    // ── Traffic ──
+    if(traffic && traffic.page_views){
+      const pv = traffic.page_views;
+      document.getElementById('adm-views-24h').textContent = pv.last_24h;
+      document.getElementById('adm-ips-24h').textContent = pv.unique_ips_last_24h;
+      document.getElementById('adm-views-total').textContent = pv.total;
+      document.getElementById('adm-ips-total').textContent = pv.unique_ips_total;
+    }
+    if(traffic && traffic.login_activity){
+      document.getElementById('adm-ips-loggedin').textContent = traffic.login_activity.unique_ips_logged_in;
+    }
+
+    // ── Engagement ──
+    if(events && events.stats){
+      const s = events.stats;
+      document.getElementById('adm-logins-ok').textContent = s.successful_logins;
+      document.getElementById('adm-logins-fail').textContent = s.failed_attempts;
+      document.getElementById('adm-users-distinct').textContent = s.unique_users_logged_in;
+    }
+
+    // ── Cache & cost ──
+    if(stats){
+      document.getElementById('adm-datasets').textContent = stats.saved_datasets;
+      document.getElementById('adm-cache').textContent = stats.analysis_cache;
+      const eff = stats.cache_efficiency || {};
+      document.getElementById('adm-avoided').textContent = eff.claude_calls_avoided ?? 0;
+      const cost = (eff.estimated_cost_saved_usd ?? 0).toFixed(2);
+      document.getElementById('adm-cost').textContent = '$'+cost;
+    }
+
+    // ── Login events table ──
+    const eventsTbody = document.getElementById('adm-events-tbody');
+    if(events && events.events){
+      const evs = events.events;
+      document.getElementById('adm-events-count').textContent = evs.length + ' shown';
+      if(!evs.length){
+        eventsTbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No login events yet</div>';
+      } else {
+        eventsTbody.innerHTML = evs.map(e => {
+          const when = e.created_at ? new Date(e.created_at).toLocaleString() : '--';
+          const statusBadge = e.success
+            ? '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--green-soft);color:var(--accent);font-weight:600">OK</span>'
+            : '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#fef2f2;color:var(--red);font-weight:600">FAIL</span>';
+          return `<div class="table-row" style="grid-template-columns:1fr 0.7fr 0.6fr 2fr 1fr;cursor:default">
+            <div style="font-size:12px;font-weight:500">${esc(e.username)}</div>
+            <div>${statusBadge}</div>
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${esc(e.ip_address||'--')}</div>
+            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.user_agent||'--')}</div>
+            <div style="font-size:11px;color:var(--muted)">${when}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // ── Page views table ──
+    const viewsTbody = document.getElementById('adm-views-tbody');
+    if(traffic && traffic.recent_views){
+      const vs = traffic.recent_views;
+      if(!vs.length){
+        viewsTbody.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No views recorded yet</div>';
+      } else {
+        viewsTbody.innerHTML = vs.map(v => {
+          const when = v.at ? new Date(v.at).toLocaleString() : '--';
+          return `<div class="table-row" style="grid-template-columns:0.6fr 2fr 1.5fr 1fr;cursor:default">
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${esc(v.ip||'--')}</div>
+            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.ua||'--')}</div>
+            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.referer||'(direct)')}</div>
+            <div style="font-size:11px;color:var(--muted)">${when}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) {
+    showToast('Could not load admin data', e.message, 'error');
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = '↻ Refresh'; }
+  }
 }
 
 // ── RULES CRUD ──
